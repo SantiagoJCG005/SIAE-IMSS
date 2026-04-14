@@ -1,5 +1,5 @@
 <?php
-/**
+/** * SI FUNCIONA NO LE MUEVAS!!!!!
  * SIAE-IMSS - API de Bitacora
  */
 
@@ -10,67 +10,67 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 // Verifica si el usuario NO ha iniciado sesion
-if (!isLoggedIn()) {
+if (!estaLogueado()) {
     // Si no ha iniciado sesion, lo manda al login
-    header('Location: ' . BASE_URL . 'views/auth/login.php');
+    header('Location: ' . URL_BASE . 'views/auth/login.php');
     exit; // Detiene la ejecucion
 }
 
 // Verifica que el usuario tenga alguno de estos roles permitidos
-requireRole([ROL_SUPERADMIN, ROL_JEFA_SERVICIOS]);
+requerirRol([ROL_SUPERADMIN, ROL_JEFA_SERVICIOS]);
 
 // Obtiene la conexion a la base de datos
-$pdo = getConnection();
+$conexion = obtenerConexion();
 
 // Obtiene la accion enviada por la URL (por ejemplo ?action=export)
 // Si no existe, se guarda vacio
-$action = $_GET['action'] ?? '';
+$accion = $_GET['action'] ?? '';
 
 // Verifica si la accion es "export"
-if ($action === 'export') {
+if ($accion === 'export') {
 
     // Obtener filtros enviados por la URL
-    $search = $_GET['search'] ?? ''; // texto de busqueda
-    $accionFilter = $_GET['accion'] ?? ''; // filtro por tipo de accion
+    $busqueda = $_GET['search'] ?? ''; // texto de busqueda
+    $filtroAccion = $_GET['accion'] ?? ''; // filtro por tipo de accion
     $fechaDesde = $_GET['fecha_desde'] ?? ''; // fecha inicial
     $fechaHasta = $_GET['fecha_hasta'] ?? ''; // fecha final
     
     // Base de la condicion SQL (siempre verdadera al inicio)
-    $where = "WHERE 1=1";
+    $condicionWhere = "WHERE 1=1";
 
     // Arreglo para guardar valores de forma segura
-    $params = [];
+    $parametros = [];
     
     // Si hay texto de busqueda
-    if (!empty($search)) {
+    if (!empty($busqueda)) {
         // Agrega condicion para buscar en username, nombre o detalle
-        $where .= " AND (u.username LIKE ? OR u.nombre_completo LIKE ? OR b.detalle LIKE ?)";
+        $condicionWhere .= " AND (u.username LIKE ? OR u.nombre_completo LIKE ? OR b.detalle LIKE ?)";
         
         // Agrega los valores al arreglo de parametros
-        $params[] = "%$search%";
-        $params[] = "%$search%";
-        $params[] = "%$search%";
+        $parametros[] = "%$busqueda%";
+        $parametros[] = "%$busqueda%";
+        $parametros[] = "%$busqueda%";
     }
     
     // Si se selecciono un tipo de accion
-    if (!empty($accionFilter)) {
+    if (!empty($filtroAccion)) {
         // Filtra por tipo de accion
-        $where .= " AND b.accion = ?";
-        $params[] = $accionFilter;
+        $condicionWhere .= " AND b.accion = ?";
+        $parametros[] = $filtroAccion;
     }
     
     // Si hay fecha desde
     if (!empty($fechaDesde)) {
         // Filtra registros desde esa fecha
-        $where .= " AND DATE(b.fecha) >= ?";
-        $params[] = $fechaDesde;
+        $condicionWhere .= " AND DATE(b.fecha) >= ?";
+        $parametros[] = $fechaDesde;
     }
     
     // Si hay fecha hasta
     if (!empty($fechaHasta)) {
         // Filtra registros hasta esa fecha
-        $where .= " AND DATE(b.fecha) <= ?";
-        $params[] = $fechaHasta;
+        $condicionWhere .= " AND DATE(b.fecha) <= ?";
+        $parametros[] = $fechaHasta;
     }
     
     // Consulta SQL para obtener datos de la bitacora junto con datos del usuario
@@ -78,18 +78,18 @@ if ($action === 'export') {
         SELECT b.fecha, u.username, u.nombre_completo, b.accion, b.detalle, b.ip_address
         FROM bitacora b 
         LEFT JOIN usuarios u ON b.id_usuario = u.id_usuario 
-        $where 
+        $condicionWhere 
         ORDER BY b.fecha DESC
     ";
 
     // Prepara la consulta para evitar inyeccion SQL
-    $stmt = $pdo->prepare($sql);
+    $consulta = $conexion->prepare($sql);
 
     // Ejecuta la consulta con los parametros
-    $stmt->execute($params);
+    $consulta->execute($parametros);
 
     // Obtiene todos los registros
-    $registros = $stmt->fetchAll();
+    $listaRegistros = $consulta->fetchAll();
     
     // Indica que la respuesta sera un archivo CSV
     header('Content-Type: text/csv; charset=utf-8');
@@ -107,15 +107,15 @@ if ($action === 'export') {
     fputcsv($output, ['Fecha', 'Usuario', 'Nombre', 'Accion', 'Detalle', 'IP']);
     
     // Recorre cada registro obtenido
-    foreach ($registros as $row) {
+    foreach ($listaRegistros as $fila) {
         // Escribe cada fila en el CSV
         fputcsv($output, [
-            $row['fecha'], // fecha del registro
-            $row['username'] ?? 'Sistema', // usuario o "Sistema" si es null
-            $row['nombre_completo'] ?? '-', // nombre o "-" si es null
-            $row['accion'], // accion realizada
-            $row['detalle'], // descripcion
-            $row['ip_address'] // direccion IP
+            $fila['fecha'], // fecha del registro
+            $fila['username'] ?? 'Sistema', // usuario o "Sistema" si es null
+            $fila['nombre_completo'] ?? '-', // nombre o "-" si es null
+            $fila['accion'], // accion realizada
+            $fila['detalle'], // descripcion
+            $fila['ip_address'] // direccion IP
         ]);
     }
     
@@ -123,7 +123,7 @@ if ($action === 'export') {
     fclose($output);
     
     // Registra en la bitacora que se exporto el archivo
-    registrarBitacora('EXPORTAR_BITACORA', 'Exportacion CSV de bitacora');
+    registrarEnBitacora('EXPORTAR_BITACORA', 'Exportacion CSV de bitacora');
 
     exit; // Finaliza el proceso
 }

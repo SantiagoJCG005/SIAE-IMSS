@@ -1,62 +1,93 @@
 <?php
 /**
- * SIAE-IMSS - Gestión de Catálogos
+ *  * SI FUNCIONA NO LE MUEVAS!!!!!
+ * SIAE-IMSS - Gestion de Catalogos
+ * Permite administrar las tablas de referencia del sistema.
+ * Los catalogos son listas de opciones que se usan en otras partes del sistema.
+ * Por ejemplo: lista de carreras, niveles educativos, modalidades, etc.
  */
-$pageTitle = 'Catálogos';
 
+// Nombre que aparecera en la pestana del navegador
+$tituloPagina = 'Catálogos';
+
+// Carga el archivo que verifica que el usuario este logueado
 require_once __DIR__ . '/../../includes/auth.php';
+
+// Carga el archivo con funciones utiles
 require_once __DIR__ . '/../../includes/functions.php';
 
-requireRole([ROL_SUPERADMIN]);
+// Verifica que solo el Superadmin pueda entrar a esta pagina
+requerirRol([ROL_SUPERADMIN]);
 
-$pdo = getConnection();
-$tab = get('tab', 'carreras');
+// Establece conexion con la base de datos
+$conexion = obtenerConexion();
 
-// Obtener datos según tab
-$data = [];
-$columns = [];
+// Lee cual pestana quiere ver el usuario, si no hay usa 'carreras' por defecto
+$pestana = obtenerGet('tab', 'carreras');
 
-switch ($tab) {
+// Arreglo donde guardaremos los datos de la base de datos
+$datos = [];
+
+// Arreglo donde guardaremos los nombres de las columnas
+$columnas = [];
+
+// Segun la pestana seleccionada, ejecuta un bloque de codigo diferente
+switch ($pestana) {
+    
+    // Pestana de carreras
     case 'carreras':
-        $stmt = $pdo->query("SELECT c.*, n.nombre as nivel_nombre FROM carreras c LEFT JOIN nivel n ON c.id_nivel = n.id_nivel ORDER BY c.nombre");
-        $data = $stmt->fetchAll();
-        $columns = ['ID', 'Clave', 'Nombre', 'Nivel', 'Activo'];
+        // Consulta carreras uniendo con niveles para obtener el nombre del nivel
+        $consulta = $conexion->query("SELECT c.*, n.nombre as nivel_nombre FROM carreras c LEFT JOIN nivel n ON c.id_nivel = n.id_nivel ORDER BY c.nombre");
+        $datos = $consulta->fetchAll();
+        $columnas = ['ID', 'Clave', 'Nombre', 'Nivel', 'Activo'];
         break;
+    
+    // Pestana de niveles educativos
     case 'niveles':
-        $stmt = $pdo->query("SELECT * FROM nivel ORDER BY nombre");
-        $data = $stmt->fetchAll();
-        $columns = ['ID', 'Nombre', 'Descripción', 'Activo'];
+        $consulta = $conexion->query("SELECT * FROM nivel ORDER BY nombre");
+        $datos = $consulta->fetchAll();
+        $columnas = ['ID', 'Nombre', 'Descripción', 'Activo'];
         break;
+    
+    // Pestana de modalidades
     case 'modalidades':
-        $stmt = $pdo->query("SELECT * FROM modalidad ORDER BY nombre");
-        $data = $stmt->fetchAll();
-        $columns = ['ID', 'Nombre', 'Descripción', 'Activo'];
+        $consulta = $conexion->query("SELECT * FROM modalidad ORDER BY nombre");
+        $datos = $consulta->fetchAll();
+        $columnas = ['ID', 'Nombre', 'Descripción', 'Activo'];
         break;
+    
+    // Pestana de periodos escolares
     case 'periodos':
-        $stmt = $pdo->query("SELECT * FROM periodo_escolar ORDER BY fecha_inicio DESC");
-        $data = $stmt->fetchAll();
-        $columns = ['ID', 'Nombre', 'Fecha Inicio', 'Fecha Fin', 'Activo'];
+        $consulta = $conexion->query("SELECT * FROM periodo_escolar ORDER BY fecha_inicio DESC");
+        $datos = $consulta->fetchAll();
+        $columnas = ['ID', 'Nombre', 'Fecha Inicio', 'Fecha Fin', 'Activo'];
         break;
+    
+    // Pestana de semestres
     case 'semestres':
-        $stmt = $pdo->query("SELECT * FROM semestre ORDER BY numero");
-        $data = $stmt->fetchAll();
-        $columns = ['ID', 'Número', 'Nombre', 'Activo'];
+        $consulta = $conexion->query("SELECT * FROM semestre ORDER BY numero");
+        $datos = $consulta->fetchAll();
+        $columnas = ['ID', 'Número', 'Nombre', 'Activo'];
         break;
+    
+    // Pestana de motivos de baja
     case 'motivos':
-        $stmt = $pdo->query("SELECT * FROM motivos_bajas ORDER BY descripcion");
-        $data = $stmt->fetchAll();
-        $columns = ['ID', 'Clave', 'Descripción', 'Activo'];
+        $consulta = $conexion->query("SELECT * FROM motivos_bajas ORDER BY descripcion");
+        $datos = $consulta->fetchAll();
+        $columnas = ['ID', 'Clave', 'Descripción', 'Activo'];
         break;
 }
 
-// Para selects en formularios
-$niveles = $pdo->query("SELECT * FROM nivel WHERE activo = 1 ORDER BY nombre")->fetchAll();
+// Obtiene los niveles activos para el formulario de carreras
+$listaNiveles = $conexion->query("SELECT * FROM nivel WHERE activo = 1 ORDER BY nombre")->fetchAll();
 
+// Incluye el header de la pagina
 include __DIR__ . '/../layouts/header.php';
+
+// Incluye el menu lateral del superadmin
 include __DIR__ . '/../layouts/sidebar-superadmin.php';
 ?>
 
-<!-- Page Header -->
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
     <div>
         <h1 class="page-title">Catálogos del Sistema</h1>
@@ -67,50 +98,51 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
     </button>
 </div>
 
-<!-- Tabs -->
 <div class="tabs">
-    <a href="?tab=carreras" class="tab <?= $tab === 'carreras' ? 'active' : '' ?>">
+    <?php // Cada pestana verifica si es la actual para agregar la clase 'active' ?>
+    <a href="?tab=carreras" class="tab <?= $pestana === 'carreras' ? 'active' : '' ?>">
         <i data-lucide="book-open" style="width: 16px; height: 16px; margin-right: 6px;"></i>
         Carreras
     </a>
-    <a href="?tab=niveles" class="tab <?= $tab === 'niveles' ? 'active' : '' ?>">
+    <a href="?tab=niveles" class="tab <?= $pestana === 'niveles' ? 'active' : '' ?>">
         <i data-lucide="layers" style="width: 16px; height: 16px; margin-right: 6px;"></i>
         Niveles
     </a>
-    <a href="?tab=modalidades" class="tab <?= $tab === 'modalidades' ? 'active' : '' ?>">
+    <a href="?tab=modalidades" class="tab <?= $pestana === 'modalidades' ? 'active' : '' ?>">
         <i data-lucide="layout-grid" style="width: 16px; height: 16px; margin-right: 6px;"></i>
         Modalidades
     </a>
-    <a href="?tab=periodos" class="tab <?= $tab === 'periodos' ? 'active' : '' ?>">
+    <a href="?tab=periodos" class="tab <?= $pestana === 'periodos' ? 'active' : '' ?>">
         <i data-lucide="calendar" style="width: 16px; height: 16px; margin-right: 6px;"></i>
         Periodos
     </a>
-    <a href="?tab=semestres" class="tab <?= $tab === 'semestres' ? 'active' : '' ?>">
+    <a href="?tab=semestres" class="tab <?= $pestana === 'semestres' ? 'active' : '' ?>">
         <i data-lucide="hash" style="width: 16px; height: 16px; margin-right: 6px;"></i>
         Semestres
     </a>
-    <a href="?tab=motivos" class="tab <?= $tab === 'motivos' ? 'active' : '' ?>">
+    <a href="?tab=motivos" class="tab <?= $pestana === 'motivos' ? 'active' : '' ?>">
         <i data-lucide="file-x" style="width: 16px; height: 16px; margin-right: 6px;"></i>
         Motivos de Baja
     </a>
 </div>
 
-<!-- Tabla de datos -->
 <div class="card">
     <div class="table-container">
         <table class="table">
             <thead>
                 <tr>
-                    <?php foreach ($columns as $col): ?>
+                    <?php // Recorre las columnas y crea un encabezado por cada una ?>
+                    <?php foreach ($columnas as $col): ?>
                     <th><?= $col ?></th>
                     <?php endforeach; ?>
                     <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                <?php if (empty($data)): ?>
+                <?php // Si no hay datos, muestra mensaje de tabla vacia ?>
+                <?php if (empty($datos)): ?>
                 <tr>
-                    <td colspan="<?= count($columns) + 1 ?>">
+                    <td colspan="<?= count($columnas) + 1 ?>">
                         <div class="empty-state">
                             <div class="empty-state-icon"><i data-lucide="database"></i></div>
                             <div class="empty-state-title">No hay registros</div>
@@ -119,71 +151,75 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                     </td>
                 </tr>
                 <?php else: ?>
-                    <?php foreach ($data as $row): ?>
+                    <?php // Recorre cada registro y crea una fila ?>
+                    <?php foreach ($datos as $fila): ?>
                     <tr>
-                        <?php if ($tab === 'carreras'): ?>
-                            <td><?= $row['id_carrera'] ?></td>
-                            <td><strong><?= htmlspecialchars($row['clave'] ?? '') ?></strong></td>
-                            <td><?= htmlspecialchars($row['nombre']) ?></td>
-                            <td><span class="badge badge-info"><?= htmlspecialchars($row['nivel_nombre'] ?? 'N/A') ?></span></td>
+                        <?php // Muestra columnas segun el tipo de catalogo ?>
+                        <?php if ($pestana === 'carreras'): ?>
+                            <td><?= $fila['id_carrera'] ?></td>
+                            <td><strong><?= htmlspecialchars($fila['clave'] ?? '') ?></strong></td>
+                            <td><?= htmlspecialchars($fila['nombre']) ?></td>
+                            <td><span class="badge badge-info"><?= htmlspecialchars($fila['nivel_nombre'] ?? 'N/A') ?></span></td>
                             <td>
-                                <?php if ($row['activo']): ?>
+                                <?php // Muestra etiqueta verde si esta activo, roja si no ?>
+                                <?php if ($fila['activo']): ?>
                                     <span class="badge badge-success badge-dot">Activo</span>
                                 <?php else: ?>
                                     <span class="badge badge-danger badge-dot">Inactivo</span>
                                 <?php endif; ?>
                             </td>
-                        <?php elseif ($tab === 'niveles'): ?>
-                            <td><?= $row['id_nivel'] ?></td>
-                            <td><strong><?= htmlspecialchars($row['nombre']) ?></strong></td>
-                            <td><?= htmlspecialchars($row['descripcion'] ?? '-') ?></td>
+                        <?php elseif ($pestana === 'niveles'): ?>
+                            <td><?= $fila['id_nivel'] ?></td>
+                            <td><strong><?= htmlspecialchars($fila['nombre']) ?></strong></td>
+                            <td><?= htmlspecialchars($fila['descripcion'] ?? '-') ?></td>
                             <td>
-                                <?php if ($row['activo']): ?>
+                                <?php if ($fila['activo']): ?>
                                     <span class="badge badge-success badge-dot">Activo</span>
                                 <?php else: ?>
                                     <span class="badge badge-danger badge-dot">Inactivo</span>
                                 <?php endif; ?>
                             </td>
-                        <?php elseif ($tab === 'modalidades'): ?>
-                            <td><?= $row['id_modalidad'] ?></td>
-                            <td><strong><?= htmlspecialchars($row['nombre']) ?></strong></td>
-                            <td><?= htmlspecialchars($row['descripcion'] ?? '-') ?></td>
+                        <?php elseif ($pestana === 'modalidades'): ?>
+                            <td><?= $fila['id_modalidad'] ?></td>
+                            <td><strong><?= htmlspecialchars($fila['nombre']) ?></strong></td>
+                            <td><?= htmlspecialchars($fila['descripcion'] ?? '-') ?></td>
                             <td>
-                                <?php if ($row['activo']): ?>
+                                <?php if ($fila['activo']): ?>
                                     <span class="badge badge-success badge-dot">Activo</span>
                                 <?php else: ?>
                                     <span class="badge badge-danger badge-dot">Inactivo</span>
                                 <?php endif; ?>
                             </td>
-                        <?php elseif ($tab === 'periodos'): ?>
-                            <td><?= $row['id_periodo'] ?></td>
-                            <td><strong><?= htmlspecialchars($row['nombre']) ?></strong></td>
-                            <td><?= formatDate($row['fecha_inicio']) ?></td>
-                            <td><?= formatDate($row['fecha_fin']) ?></td>
+                        <?php elseif ($pestana === 'periodos'): ?>
+                            <td><?= $fila['id_periodo'] ?></td>
+                            <td><strong><?= htmlspecialchars($fila['nombre']) ?></strong></td>
+                            <?php // formatearFecha convierte la fecha a formato legible ?>
+                            <td><?= formatearFecha($fila['fecha_inicio']) ?></td>
+                            <td><?= formatearFecha($fila['fecha_fin']) ?></td>
                             <td>
-                                <?php if ($row['activo']): ?>
+                                <?php if ($fila['activo']): ?>
                                     <span class="badge badge-success badge-dot">Activo</span>
                                 <?php else: ?>
                                     <span class="badge badge-secondary badge-dot">Cerrado</span>
                                 <?php endif; ?>
                             </td>
-                        <?php elseif ($tab === 'semestres'): ?>
-                            <td><?= $row['id_semestre'] ?></td>
-                            <td><strong><?= $row['numero'] ?></strong></td>
-                            <td><?= htmlspecialchars($row['nombre']) ?></td>
+                        <?php elseif ($pestana === 'semestres'): ?>
+                            <td><?= $fila['id_semestre'] ?></td>
+                            <td><strong><?= $fila['numero'] ?></strong></td>
+                            <td><?= htmlspecialchars($fila['nombre']) ?></td>
                             <td>
-                                <?php if ($row['activo']): ?>
+                                <?php if ($fila['activo']): ?>
                                     <span class="badge badge-success badge-dot">Activo</span>
                                 <?php else: ?>
                                     <span class="badge badge-danger badge-dot">Inactivo</span>
                                 <?php endif; ?>
                             </td>
-                        <?php elseif ($tab === 'motivos'): ?>
-                            <td><?= $row['id_motivo'] ?></td>
-                            <td><strong><?= htmlspecialchars($row['clave'] ?? '') ?></strong></td>
-                            <td><?= htmlspecialchars($row['descripcion']) ?></td>
+                        <?php elseif ($pestana === 'motivos'): ?>
+                            <td><?= $fila['id_motivo'] ?></td>
+                            <td><strong><?= htmlspecialchars($fila['clave'] ?? '') ?></strong></td>
+                            <td><?= htmlspecialchars($fila['descripcion']) ?></td>
                             <td>
-                                <?php if ($row['activo']): ?>
+                                <?php if ($fila['activo']): ?>
                                     <span class="badge badge-success badge-dot">Activo</span>
                                 <?php else: ?>
                                     <span class="badge badge-danger badge-dot">Inactivo</span>
@@ -192,10 +228,12 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                         <?php endif; ?>
                         <td>
                             <div class="table-actions">
-                                <button class="btn btn-ghost btn-icon" title="Editar" onclick="editarRegistro(<?= htmlspecialchars(json_encode($row, JSON_UNESCAPED_UNICODE)) ?>)">
+                                <?php // json_encode convierte los datos PHP a JSON para JavaScript ?>
+                                <button class="btn btn-ghost btn-icon" title="Editar" onclick="editarRegistro(<?= htmlspecialchars(json_encode($fila, JSON_UNESCAPED_UNICODE)) ?>)">
                                     <i data-lucide="pencil"></i>
                                 </button>
-                                <button class="btn btn-ghost btn-icon" title="Eliminar" onclick="eliminarRegistro(<?= $row[array_key_first($row)] ?>)">
+                                <?php // array_key_first obtiene el ID del registro ?>
+                                <button class="btn btn-ghost btn-icon" title="Eliminar" onclick="eliminarRegistro(<?= $fila[array_key_first($fila)] ?>)">
                                     <i data-lucide="trash-2"></i>
                                 </button>
                             </div>
@@ -208,7 +246,6 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
     </div>
 </div>
 
-<!-- Modal -->
 <div class="modal-overlay" id="modalCatalogo">
     <div class="modal">
         <div class="modal-header">
@@ -230,13 +267,22 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
 </div>
 
 <script>
-const currentTab = '<?= $tab ?>';
-const niveles = <?= json_encode($niveles) ?>;
+// Guarda la pestana actual que viene de PHP
+const currentTab = '<?= $pestana ?>';
+
+// Convierte el arreglo de niveles de PHP a JavaScript
+const niveles = <?= json_encode($listaNiveles) ?>;
+
+// Variable que guarda el ID del registro en edicion, null si es nuevo
 let editingId = null;
 
+// Funcion que genera el HTML del formulario segun el tipo de catalogo
+// Recibe data con los datos del registro o null si es nuevo
 function getFormHTML(data = null) {
+    // Si hay datos, guarda el ID del primer campo
     editingId = data ? Object.values(data)[0] : null;
     
+    // Segun la pestana, retorna un formulario diferente
     switch (currentTab) {
         case 'carreras':
             return `
@@ -373,53 +419,100 @@ function getFormHTML(data = null) {
     }
 }
 
+// Funcion que abre el modal para crear un nuevo registro
 function abrirModal() {
+    // Cambia el titulo a "Nuevo Registro"
     document.getElementById('modalTitle').textContent = 'Nuevo Registro';
+    
+    // Genera el formulario vacio
     document.getElementById('modalBody').innerHTML = getFormHTML();
+    
+    // Muestra el modal agregando la clase active
     document.getElementById('modalCatalogo').classList.add('active');
+    
+    // Activa los iconos de Lucide
     lucide.createIcons();
 }
 
+// Funcion que abre el modal para editar un registro existente
+// Recibe data con los datos del registro
 function editarRegistro(data) {
+    // Cambia el titulo a "Editar Registro"
     document.getElementById('modalTitle').textContent = 'Editar Registro';
+    
+    // Genera el formulario con los datos del registro
     document.getElementById('modalBody').innerHTML = getFormHTML(data);
+    
+    // Muestra el modal
     document.getElementById('modalCatalogo').classList.add('active');
+    
+    // Activa los iconos
     lucide.createIcons();
 }
 
+// Funcion que cierra el modal
 function cerrarModal() {
+    // Oculta el modal quitando la clase active
     document.getElementById('modalCatalogo').classList.remove('active');
+    
+    // Limpia la variable de edicion
     editingId = null;
 }
 
+// Funcion asincrona que guarda el registro en la base de datos
+// Recibe e que es el evento del formulario
 async function guardarRegistro(e) {
+    // Evita que el formulario recargue la pagina
     e.preventDefault();
     
+    // Obtiene el formulario
     const form = document.getElementById('formCatalogo');
+    
+    // Recolecta todos los campos del formulario
     const formData = new FormData(form);
+    
+    // Convierte a objeto simple
     const data = Object.fromEntries(formData);
     
+    // Agrega la pestana actual
     data.tab = currentTab;
+    
+    // Define la accion: update si estamos editando, create si es nuevo
     data.action = editingId ? 'update' : 'create';
+    
+    // Si estamos editando, agrega el ID
     if (editingId) data.id = editingId;
 
-    const response = await fetchAPI('<?= BASE_URL ?>api/catalogos.php', {
+    // Envia los datos al servidor
+    const response = await llamarApi('<?= URL_BASE ?>api/catalogos.php', {
         method: 'POST',
         body: JSON.stringify(data)
     });
     
+    // Si fue exitoso
     if (response && response.success) {
-        showToast(response.message);
+        // Muestra mensaje de exito
+        mostrarNotificacion(response.message);
+        
+        // Cierra el modal
         cerrarModal();
+        
+        // Recarga la pagina en 1 segundo
         setTimeout(() => location.reload(), 1000);
     } else {
-        showToast(response?.message || 'Error al guardar', 'error');
+        // Si hubo error, muestra el mensaje
+        mostrarNotificacion(response?.message || 'Error al guardar', 'error');
     }
 }
 
+// Funcion asincrona que elimina un registro
+// Recibe id del registro a eliminar
 async function eliminarRegistro(id) {
-    confirmAction('¿Deseas eliminar este registro?', async () => {
-        const response = await fetchAPI('<?= BASE_URL ?>api/catalogos.php', {
+    // Muestra dialogo de confirmacion
+    confirmarAccion('¿Deseas eliminar este registro?', async () => {
+        
+        // Envia solicitud de eliminacion al servidor
+        const response = await llamarApi('<?= URL_BASE ?>api/catalogos.php', {
             method: 'POST',
             body: JSON.stringify({
                 action: 'delete',
@@ -428,23 +521,27 @@ async function eliminarRegistro(id) {
             })
         });
         
+        // Si se elimino correctamente
         if (response && response.success) {
-            showToast(response.message);
+            mostrarNotificacion(response.message);
             setTimeout(() => location.reload(), 1000);
         } else {
-            showToast(response?.message || 'Error al eliminar', 'error');
+            mostrarNotificacion(response?.message || 'Error al eliminar', 'error');
         }
     });
 }
 
-// Cerrar modal con ESC
+// Cierra el modal al presionar ESC
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') cerrarModal();
 });
 
+// Cierra el modal al hacer clic fuera de el
 document.getElementById('modalCatalogo').addEventListener('click', (e) => {
+    // Si el clic fue en el fondo oscuro, cierra el modal
     if (e.target === e.currentTarget) cerrarModal();
 });
 </script>
 
+<?php // Incluye el footer ?>
 <?php include __DIR__ . '/../layouts/footer.php'; ?>

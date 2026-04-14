@@ -1,7 +1,14 @@
 <?php
 /**
+ *  * SI FUNCIONA NO LE MUEVAS!!!!!
  * SIAE-IMSS - Sin acceso
+ * Muestra una pagina de error cuando el usuario intenta entrar a una seccion
+ * del sistema para la cual no tiene permisos. Es como una puerta cerrada
+ * que le dice "no puedes pasar" y le da un boton para regresar al inicio.
  */
+
+// Carga el archivo de configuracion que contiene constantes como URL_BASE
+// Esto es necesario para poder crear el enlace de "Volver al inicio"
 require_once __DIR__ . '/../../config/config.php';
 ?>
 <!DOCTYPE html>
@@ -60,11 +67,19 @@ require_once __DIR__ . '/../../config/config.php';
         </div>
         <h1>Acceso Denegado</h1>
         <p>No tienes permisos para acceder a esta sección del sistema.</p>
-        <a href="<?= BASE_URL ?>" class="btn">
+
+        <!-- Enlace para volver al inicio, usa URL_BASE que viene del archivo de configuracion de PHP -->
+        <a href="<?= URL_BASE ?>" class="btn">
             <i data-lucide="arrow-left"></i>
             Volver al inicio
         </a>
     </div>
-    <script>lucide.createIcons();</script>
+
+    <script>
+        // Activa todos los iconos de Lucide en la pagina
+        // Esta funcion busca todas las etiquetas <i> con el atributo data-lucide
+        // y las convierte en iconos SVG visibles
+        lucide.createIcons();
+    </script>
 </body>
 </html>

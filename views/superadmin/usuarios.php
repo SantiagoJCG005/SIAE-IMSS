@@ -1,79 +1,98 @@
 <?php
 /**
- * SIAE-IMSS - Gestión de Usuarios
+ *  * SI FUNCIONA NO LE MUEVAS!!!!!
+ * SIAE-IMSS - Gestion de Usuarios
+ * Permite al Superadmin ver, crear, editar y desactivar usuarios del sistema.
+ * Incluye busqueda, filtros por rol, paginacion y estadisticas.
  */
-$pageTitle = 'Usuarios';
 
+// Titulo que aparecera en la pestana del navegador
+$tituloPagina = 'Usuarios';
+
+// Carga el archivo de autenticacion
 require_once __DIR__ . '/../../includes/auth.php';
+
+// Carga el archivo de funciones auxiliares
 require_once __DIR__ . '/../../includes/functions.php';
 
-// Verificar acceso
-requireRole([ROL_SUPERADMIN]);
+// Verifica que solo el Superadmin pueda acceder
+requerirRol([ROL_SUPERADMIN]);
 
-$pdo = getConnection();
+// Establece conexion con la base de datos
+$conexion = obtenerConexion();
 
-// Parámetros de búsqueda y paginación
-$search = get('search', '');
-$rolFilter = get('rol', '');
-$page = max(1, intval(get('page', 1)));
-$perPage = 10;
+// Lee parametros de la URL para busqueda y filtros
+$busqueda = obtenerGet('search', '');      // Texto de busqueda
+$filtroRol = obtenerGet('rol', '');      // Filtro por rol
+$pagina = max(1, intval(obtenerGet('page', 1)));  // Pagina actual, minimo 1
+$porPagina = 10;                    // Usuarios por pagina
 
-// Construir query
-$where = "WHERE 1=1";
-$params = [];
+// Inicia la construccion de la consulta SQL
+// WHERE 1=1 permite agregar condiciones con AND facilmente
+$condicionWhere = "WHERE 1=1";
+$parametros = [];  // Arreglo para los parametros de la consulta
 
-if (!empty($search)) {
-    $where .= " AND (u.username LIKE ? OR u.nombre_completo LIKE ? OR u.email LIKE ?)";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
+// Si hay texto de busqueda, agrega condicion
+if (!empty($busqueda)) {
+    // Busca en username, nombre_completo o email
+    $condicionWhere .= " AND (u.username LIKE ? OR u.nombre_completo LIKE ? OR u.email LIKE ?)";
+    // Agrega el valor 3 veces con comodines para busqueda parcial
+    $parametros[] = "%$busqueda%";
+    $parametros[] = "%$busqueda%";
+    $parametros[] = "%$busqueda%";
 }
 
-if (!empty($rolFilter)) {
-    $where .= " AND u.id_rol = ?";
-    $params[] = $rolFilter;
+// Si hay filtro de rol, agrega condicion
+if (!empty($filtroRol)) {
+    $condicionWhere .= " AND u.id_rol = ?";
+    $parametros[] = $filtroRol;
 }
 
-// Contar total
-$countStmt = $pdo->prepare("SELECT COUNT(*) as total FROM usuarios u $where");
-$countStmt->execute($params);
-$total = $countStmt->fetch()['total'];
+// Cuenta el total de registros que coinciden con los filtros
+$consultaConteo = $conexion->prepare("SELECT COUNT(*) as total FROM usuarios u $condicionWhere");
+$consultaConteo->execute($parametros);
+$totalRegistros = $consultaConteo->fetch()['total'];
 
-$pagination = paginate($total, $perPage, $page);
+// Calcula la paginacion usando funcion auxiliar
+$paginacion = paginar($totalRegistros, $porPagina, $pagina);
 
-// Obtener usuarios
+// Consulta los usuarios con su rol
+// LEFT JOIN incluye usuarios aunque no tengan rol asignado
+// LIMIT y OFFSET controlan la paginacion
 $sql = "
     SELECT u.*, r.nombre as rol_nombre 
     FROM usuarios u 
     LEFT JOIN roles r ON u.id_rol = r.id_rol 
-    $where 
+    $condicionWhere 
     ORDER BY u.id_usuario DESC 
-    LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}
+    LIMIT {$paginacion['per_page']} OFFSET {$paginacion['offset']}
 ";
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$usuarios = $stmt->fetchAll();
+$consulta = $conexion->prepare($sql);
+$consulta->execute($parametros);
+$listaUsuarios = $consulta->fetchAll();
 
-// Obtener roles para filtro
-$rolesStmt = $pdo->query("SELECT * FROM roles ORDER BY nombre");
-$roles = $rolesStmt->fetchAll();
+// Obtiene todos los roles para el filtro desplegable
+$rolesStmt = $conexion->query("SELECT * FROM roles ORDER BY nombre");
+$listaRoles = $rolesStmt->fetchAll();
 
-// Estadísticas
-$statsStmt = $pdo->query("
+// Calcula estadisticas de usuarios
+// SUM con condicion cuenta registros que cumplen la condicion
+$statsStmt = $conexion->query("
     SELECT 
         SUM(activo = 1) as activos,
         SUM(activo = 0) as inactivos,
         COUNT(DISTINCT id_rol) as roles_unicos
     FROM usuarios
 ");
-$stats = $statsStmt->fetch();
+$estadisticas = $statsStmt->fetch();
 
-// Incluir header y sidebar
+// Incluye el header de la pagina
 include __DIR__ . '/../layouts/header.php';
+
+// Incluye el menu lateral del superadmin
 include __DIR__ . '/../layouts/sidebar-superadmin.php';
 ?>
 
-<!-- Page Header -->
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
     <div>
         <h1 class="page-title">Usuarios</h1>
@@ -85,23 +104,26 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
     </button>
 </div>
 
-<!-- Filtros -->
 <div class="filters">
     <div class="filter-group" style="flex: 2;">
         <div class="header-search" style="width: 100%;">
             <i data-lucide="search"></i>
+            <?php // Campo de busqueda con valor actual y evento de tecleo ?>
             <input type="text" 
                    id="searchInput"
                    placeholder="Buscar por nombre, usuario o email..." 
-                   value="<?= htmlspecialchars($search) ?>"
-                   onkeyup="debounceSearch(this.value)">
+                   value="<?= htmlspecialchars($busqueda) ?>"
+                   onkeyup="busquedaConRetraso(this.value)">
         </div>
     </div>
     <div class="filter-group">
+        <?php // Desplegable de roles ?>
         <select class="form-control form-select" id="rolFilter" onchange="filtrarPorRol(this.value)">
             <option value="">Filtrar por Rol</option>
-            <?php foreach ($roles as $rol): ?>
-            <option value="<?= $rol['id_rol'] ?>" <?= $rolFilter == $rol['id_rol'] ? 'selected' : '' ?>>
+            <?php // Recorre cada rol para crear una opcion ?>
+            <?php foreach ($listaRoles as $rol): ?>
+            <?php // Marca como seleccionado si coincide con el filtro actual ?>
+            <option value="<?= $rol['id_rol'] ?>" <?= $filtroRol == $rol['id_rol'] ? 'selected' : '' ?>>
                 <?= htmlspecialchars($rol['nombre']) ?>
             </option>
             <?php endforeach; ?>
@@ -115,7 +137,6 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
     </div>
 </div>
 
-<!-- Tabla de usuarios -->
 <div class="card">
     <div class="table-container">
         <table class="table">
@@ -130,7 +151,8 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                 </tr>
             </thead>
             <tbody>
-                <?php if (empty($usuarios)): ?>
+                <?php // Si no hay usuarios, muestra mensaje ?>
+                <?php if (empty($listaUsuarios)): ?>
                 <tr>
                     <td colspan="6">
                         <div class="empty-state">
@@ -141,7 +163,8 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                     </td>
                 </tr>
                 <?php else: ?>
-                    <?php foreach ($usuarios as $usuario): ?>
+                    <?php // Recorre cada usuario para crear su fila ?>
+                    <?php foreach ($listaUsuarios as $usuario): ?>
                     <tr>
                         <td>
                             <strong><?= htmlspecialchars($usuario['username']) ?></strong>
@@ -149,6 +172,7 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                         <td><?= htmlspecialchars($usuario['nombre_completo']) ?></td>
                         <td>
                             <?php
+                            // Determina el color de la etiqueta segun el rol
                             $badgeClass = 'badge-secondary';
                             switch ($usuario['id_rol']) {
                                 case ROL_SUPERADMIN: $badgeClass = 'badge-superadmin'; break;
@@ -163,17 +187,21 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                             </span>
                         </td>
                         <td>
+                            <?php // Solo estudiantes pueden estar vinculados a un alumno ?>
                             <?php if ($usuario['id_rol'] == ROL_ESTUDIANTE): ?>
+                                <?php // Si tiene numero de control, esta vinculado ?>
                                 <?php if (!empty($usuario['numero_control'])): ?>
                                     <?= htmlspecialchars($usuario['nombre_completo']) ?> (ID: <?= $usuario['numero_control'] ?>)
                                 <?php else: ?>
                                     <span class="text-warning">⚠ SIN VINCULAR</span>
                                 <?php endif; ?>
                             <?php else: ?>
+                                <?php // Para otros roles no aplica ?>
                                 <span class="text-muted">N/A</span>
                             <?php endif; ?>
                         </td>
                         <td>
+                            <?php // Muestra etiqueta verde si activo, roja si inactivo ?>
                             <?php if ($usuario['activo']): ?>
                                 <span class="badge badge-success badge-dot">Activo</span>
                             <?php else: ?>
@@ -182,10 +210,12 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                         </td>
                         <td>
                             <div class="table-actions">
+                                <?php // Boton editar ?>
                                 <button class="btn btn-ghost btn-icon" title="Editar" 
                                         onclick="editarUsuario(<?= $usuario['id_usuario'] ?>)">
                                     <i data-lucide="pencil"></i>
                                 </button>
+                                <?php // Boton activar/desactivar, cambia icono segun estado ?>
                                 <button class="btn btn-ghost btn-icon" title="<?= $usuario['activo'] ? 'Desactivar' : 'Activar' ?>"
                                         onclick="toggleUsuario(<?= $usuario['id_usuario'] ?>, <?= $usuario['activo'] ? 0 : 1 ?>)">
                                     <i data-lucide="<?= $usuario['activo'] ? 'lock' : 'unlock' ?>"></i>
@@ -199,42 +229,51 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
         </table>
     </div>
     
-    <!-- Paginación -->
-    <?php if ($pagination['total_pages'] > 1): ?>
+    <?php // Solo muestra paginacion si hay mas de 1 pagina ?>
+    <?php if ($paginacion['total_pages'] > 1): ?>
     <div class="card-footer" style="display: flex; justify-content: space-between; align-items: center;">
         <div class="pagination-info">
-            Mostrando <?= $pagination['offset'] + 1 ?> - <?= min($pagination['offset'] + $perPage, $total) ?> de <?= number_format($total) ?> usuarios registrados
+            <?php // Muestra rango actual y total ?>
+            Mostrando <?= $paginacion['offset'] + 1 ?> - <?= min($paginacion['offset'] + $porPagina, $totalRegistros) ?> de <?= number_format($totalRegistros) ?> usuarios registrados
         </div>
         <div class="pagination">
-            <button class="pagination-btn" onclick="goToPage(1)" <?= !$pagination['has_prev'] ? 'disabled' : '' ?>>
+            <?php // Boton ir a primera pagina ?>
+            <button class="pagination-btn" onclick="irAPagina(1)" <?= !$paginacion['has_prev'] ? 'disabled' : '' ?>>
                 <i data-lucide="chevrons-left"></i>
             </button>
-            <button class="pagination-btn" onclick="goToPage(<?= $page - 1 ?>)" <?= !$pagination['has_prev'] ? 'disabled' : '' ?>>
+            <?php // Boton pagina anterior ?>
+            <button class="pagination-btn" onclick="irAPagina(<?= $pagina - 1 ?>)" <?= !$paginacion['has_prev'] ? 'disabled' : '' ?>>
                 <i data-lucide="chevron-left"></i>
             </button>
             
             <?php
-            $start = max(1, $page - 2);
-            $end = min($pagination['total_pages'], $page + 2);
+            // Calcula el rango de paginas a mostrar (2 antes y 2 despues de la actual)
+            $start = max(1, $pagina - 2);
+            $end = min($paginacion['total_pages'], $pagina + 2);
             
+            // Crea botones para cada pagina en el rango
             for ($i = $start; $i <= $end; $i++):
             ?>
-            <button class="pagination-btn <?= $i == $page ? 'active' : '' ?>" onclick="goToPage(<?= $i ?>)">
+            <?php // Marca la pagina actual con clase 'active' ?>
+            <button class="pagination-btn <?= $i == $pagina ? 'active' : '' ?>" onclick="irAPagina(<?= $i ?>)">
                 <?= $i ?>
             </button>
             <?php endfor; ?>
             
-            <?php if ($end < $pagination['total_pages']): ?>
+            <?php // Si hay mas paginas, muestra puntos suspensivos y ultima pagina ?>
+            <?php if ($end < $paginacion['total_pages']): ?>
             <span style="padding: 0 8px;">...</span>
-            <button class="pagination-btn" onclick="goToPage(<?= $pagination['total_pages'] ?>)">
-                <?= $pagination['total_pages'] ?>
+            <button class="pagination-btn" onclick="irAPagina(<?= $paginacion['total_pages'] ?>)">
+                <?= $paginacion['total_pages'] ?>
             </button>
             <?php endif; ?>
             
-            <button class="pagination-btn" onclick="goToPage(<?= $page + 1 ?>)" <?= !$pagination['has_next'] ? 'disabled' : '' ?>>
+            <?php // Boton pagina siguiente ?>
+            <button class="pagination-btn" onclick="irAPagina(<?= $pagina + 1 ?>)" <?= !$paginacion['has_next'] ? 'disabled' : '' ?>>
                 <i data-lucide="chevron-right"></i>
             </button>
-            <button class="pagination-btn" onclick="goToPage(<?= $pagination['total_pages'] ?>)" <?= !$pagination['has_next'] ? 'disabled' : '' ?>>
+            <?php // Boton ir a ultima pagina ?>
+            <button class="pagination-btn" onclick="irAPagina(<?= $paginacion['total_pages'] ?>)" <?= !$paginacion['has_next'] ? 'disabled' : '' ?>>
                 <i data-lucide="chevrons-right"></i>
             </button>
         </div>
@@ -242,7 +281,6 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
     <?php endif; ?>
 </div>
 
-<!-- Stats Cards -->
 <div class="stats-grid" style="margin-top: 24px;">
     <div class="stat-card">
         <div class="stat-icon success">
@@ -250,7 +288,8 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
         </div>
         <div class="stat-content">
             <div class="stat-label">Activos</div>
-            <div class="stat-value"><?= number_format($stats['activos'] ?? 0) ?></div>
+            <?php // Usa operador ?? para valor por defecto si es null ?>
+            <div class="stat-value"><?= number_format($estadisticas['activos'] ?? 0) ?></div>
         </div>
     </div>
     <div class="stat-card">
@@ -259,7 +298,7 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
         </div>
         <div class="stat-content">
             <div class="stat-label">Inactivos</div>
-            <div class="stat-value"><?= number_format($stats['inactivos'] ?? 0) ?></div>
+            <div class="stat-value"><?= number_format($estadisticas['inactivos'] ?? 0) ?></div>
         </div>
     </div>
     <div class="stat-card">
@@ -268,12 +307,11 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
         </div>
         <div class="stat-content">
             <div class="stat-label">Roles Únicos</div>
-            <div class="stat-value"><?= $stats['roles_unicos'] ?? 0 ?></div>
+            <div class="stat-value"><?= $estadisticas['roles_unicos'] ?? 0 ?></div>
         </div>
     </div>
 </div>
 
-<!-- Modal Nuevo/Editar Usuario -->
 <div class="modal-overlay" id="modalUsuario">
     <div class="modal" style="max-width: 600px;">
         <div class="modal-header">
@@ -319,7 +357,8 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                         <label class="form-label">Rol *</label>
                         <select name="id_rol" id="id_rol" class="form-control form-select" required>
                             <option value="">Seleccionar rol</option>
-                            <?php foreach ($roles as $rol): ?>
+                            <?php // Crea opciones para cada rol ?>
+                            <?php foreach ($listaRoles as $rol): ?>
                             <option value="<?= $rol['id_rol'] ?>"><?= htmlspecialchars($rol['nombre']) ?></option>
                             <?php endforeach; ?>
                         </select>
@@ -345,112 +384,163 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
 </div>
 
 <script>
-let searchTimeout;
+// Variable para controlar el tiempo de espera en la busqueda
+let tiempoEsperaBusqueda;
 
-function debounceSearch(value) {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
+// Funcion que espera 500ms despues de dejar de escribir antes de buscar
+// Evita hacer busquedas con cada tecla presionada
+function busquedaConRetraso(value) {
+    // Cancela el timeout anterior si existe
+    clearTimeout(tiempoEsperaBusqueda);
+    
+    // Programa una nueva busqueda en 500ms
+    tiempoEsperaBusqueda = setTimeout(() => {
+        // Obtiene la URL actual
         const url = new URL(window.location);
+        
+        // Si hay texto, agrega el parametro search
         if (value) {
             url.searchParams.set('search', value);
         } else {
+            // Si esta vacio, quita el parametro
             url.searchParams.delete('search');
         }
+        
+        // Regresa a la pagina 1 al buscar
         url.searchParams.set('page', 1);
+        
+        // Redirige a la nueva URL
         window.location = url;
     }, 500);
 }
 
+// Funcion que filtra por rol seleccionado
 function filtrarPorRol(value) {
     const url = new URL(window.location);
+    
     if (value) {
         url.searchParams.set('rol', value);
     } else {
         url.searchParams.delete('rol');
     }
+    
+    // Regresa a pagina 1 al filtrar
     url.searchParams.set('page', 1);
     window.location = url;
 }
 
-function goToPage(page) {
+// Funcion para navegar a una pagina especifica
+function irAPagina(page) {
     const url = new URL(window.location);
     url.searchParams.set('page', page);
     window.location = url;
 }
 
+// Funcion que abre el modal para crear un nuevo usuario
 function abrirModalUsuario() {
+    // Configura el modal para modo "crear"
     document.getElementById('modalTitle').textContent = 'Nuevo Usuario';
-    document.getElementById('formUsuario').reset();
-    document.getElementById('id_usuario').value = '';
+    document.getElementById('formUsuario').reset();      // Limpia el formulario
+    document.getElementById('id_usuario').value = '';    // Sin ID significa nuevo
     document.getElementById('passHint').textContent = '(requerida)';
-    document.getElementById('password').required = true;
+    document.getElementById('password').required = true; // Contrasena obligatoria
+    
+    // Muestra el modal agregando la clase 'active'
     document.getElementById('modalUsuario').classList.add('active');
+    
+    // Recarga los iconos de Lucide
     lucide.createIcons();
 }
 
+// Funcion asincrona que carga datos de un usuario para editar
 async function editarUsuario(id) {
-    const response = await fetchAPI(`<?= BASE_URL ?>api/usuarios.php?action=get&id=${id}`);
+    // Obtiene los datos del usuario desde la API
+    const response = await llamarApi(`<?= URL_BASE ?>api/usuarios.php?action=get&id=${id}`);
+    
     if (response && response.success) {
         const user = response.data;
+        
+        // Configura el modal para modo "editar"
         document.getElementById('modalTitle').textContent = 'Editar Usuario';
+        
+        // Llena los campos con los datos del usuario
         document.getElementById('id_usuario').value = user.id_usuario;
         document.getElementById('username').value = user.username;
         document.getElementById('email').value = user.email;
         document.getElementById('nombre_completo').value = user.nombre_completo;
         document.getElementById('id_rol').value = user.id_rol;
         document.getElementById('activo').value = user.activo;
+        
+        // Limpia los campos de contrasena
         document.getElementById('password').value = '';
         document.getElementById('password_confirm').value = '';
+        
+        // Contrasena no es obligatoria al editar
         document.getElementById('passHint').textContent = '(dejar vacío para mantener)';
         document.getElementById('password').required = false;
+        
+        // Muestra el modal
         document.getElementById('modalUsuario').classList.add('active');
         lucide.createIcons();
     }
 }
 
+// Funcion que cierra el modal
 function cerrarModal() {
     document.getElementById('modalUsuario').classList.remove('active');
 }
 
+// Funcion asincrona que guarda un usuario (crear o editar)
 async function guardarUsuario(e) {
+    // Evita que el formulario se envie de forma tradicional
     e.preventDefault();
     
+    // Obtiene los datos del formulario
     const form = document.getElementById('formUsuario');
     const formData = new FormData(form);
-    const data = Object.fromEntries(formData);
+    const data = Object.fromEntries(formData);  // Convierte a objeto
     
-    // Validar contraseñas
+    // Valida que las contrasenas coincidan
     if (data.password && data.password !== data.password_confirm) {
-        showToast('Las contraseñas no coinciden', 'error');
+        mostrarNotificacion('Las contraseñas no coinciden', 'error');
         return;
     }
     
+    // Valida la longitud minima de la contrasena
     if (data.password && data.password.length < 8) {
-        showToast('La contraseña debe tener al menos 8 caracteres', 'error');
+        mostrarNotificacion('La contraseña debe tener al menos 8 caracteres', 'error');
         return;
     }
     
-    const response = await fetchAPI('<?= BASE_URL ?>api/usuarios.php', {
+    // Envia los datos a la API
+    const response = await llamarApi('<?= URL_BASE ?>api/usuarios.php', {
         method: 'POST',
         body: JSON.stringify({
+            // Si tiene id_usuario es update, si no es create
             action: data.id_usuario ? 'update' : 'create',
-            ...data
+            ...data  // Incluye todos los datos del formulario
         })
     });
     
     if (response && response.success) {
-        showToast(response.message);
+        mostrarNotificacion(response.message);
         cerrarModal();
+        // Recarga la pagina despues de 1 segundo
         setTimeout(() => location.reload(), 1000);
     } else {
-        showToast(response?.message || 'Error al guardar', 'error');
+        mostrarNotificacion(response?.message || 'Error al guardar', 'error');
     }
 }
 
+// Funcion asincrona que activa o desactiva un usuario
 async function toggleUsuario(id, nuevoEstado) {
+    // Determina el texto de la accion
     const accion = nuevoEstado ? 'activar' : 'desactivar';
-    confirmAction(`¿Deseas ${accion} este usuario?`, async () => {
-        const response = await fetchAPI('<?= BASE_URL ?>api/usuarios.php', {
+    
+    // Pide confirmacion antes de proceder
+    confirmarAccion(`¿Deseas ${accion} este usuario?`, async () => {
+        // Envia la peticion a la API
+        const response = await llamarApi('<?= URL_BASE ?>api/usuarios.php', {
             method: 'POST',
             body: JSON.stringify({
                 action: 'toggle',
@@ -460,27 +550,30 @@ async function toggleUsuario(id, nuevoEstado) {
         });
         
         if (response && response.success) {
-            showToast(response.message);
+            mostrarNotificacion(response.message);
             setTimeout(() => location.reload(), 1000);
         } else {
-            showToast(response?.message || 'Error al actualizar', 'error');
+            mostrarNotificacion(response?.message || 'Error al actualizar', 'error');
         }
     });
 }
 
+// Funcion que redirige a la exportacion de usuarios
 function exportarUsuarios() {
-    window.location = '<?= BASE_URL ?>api/usuarios.php?action=export';
+    window.location = '<?= URL_BASE ?>api/usuarios.php?action=export';
 }
 
-// Cerrar modal con ESC
+// Cierra el modal al presionar la tecla Escape
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') cerrarModal();
 });
 
-// Cerrar modal al hacer clic fuera
+// Cierra el modal al hacer clic fuera de el (en el fondo oscuro)
 document.getElementById('modalUsuario').addEventListener('click', (e) => {
+    // Solo cierra si el clic fue en el overlay, no en el contenido del modal
     if (e.target === e.currentTarget) cerrarModal();
 });
 </script>
 
+<?php // Incluye el footer ?>
 <?php include __DIR__ . '/../layouts/footer.php'; ?>

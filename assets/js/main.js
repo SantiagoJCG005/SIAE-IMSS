@@ -12,14 +12,14 @@ document.addEventListener('DOMContentLoaded', function() {
 /**
  * Formatear número con separadores de miles
  */
-function formatNumber(num) {
+function formatearNumero(num) {
     return new Intl.NumberFormat('es-MX').format(num);
 }
 
 /**
  * Formatear fecha
  */
-function formatDate(dateStr) {
+function formatearFecha(dateStr) {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     return date.toLocaleDateString('es-MX');
@@ -28,7 +28,7 @@ function formatDate(dateStr) {
 /**
  * Formatear fecha y hora
  */
-function formatDateTime(dateStr) {
+function formatearFechaHora(dateStr) {
     if (!dateStr) return '';
     const date = new Date(dateStr);
     return date.toLocaleDateString('es-MX') + ' ' + date.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
@@ -37,7 +37,7 @@ function formatDateTime(dateStr) {
 /**
  * Sanitizar caracteres para IMSS
  */
-function sanitizeIMSS(text) {
+function limpiarParaIMSS(text) {
     if (!text) return '';
     
     const replacements = {
@@ -98,10 +98,10 @@ function debounce(func, wait) {
 /**
  * Copiar texto al portapapeles
  */
-async function copyToClipboard(text) {
+async function copiarAlPortapapeles(text) {
     try {
         await navigator.clipboard.writeText(text);
-        showToast('Copiado al portapapeles');
+        mostrarNotificacion('Copiado al portapapeles');
         return true;
     } catch (err) {
         console.error('Error al copiar:', err);
@@ -112,7 +112,7 @@ async function copyToClipboard(text) {
 /**
  * Descargar archivo
  */
-function downloadFile(content, filename, mimeType = 'text/plain') {
+function descargarArchivo(content, filename, mimeType = 'text/plain') {
     const blob = new Blob([content], { type: mimeType });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -127,7 +127,7 @@ function downloadFile(content, filename, mimeType = 'text/plain') {
 /**
  * Loader global
  */
-function showLoader(message = 'Procesando...') {
+function mostrarCargando(message = 'Procesando...') {
     Swal.fire({
         title: message,
         allowOutsideClick: false,
@@ -138,7 +138,7 @@ function showLoader(message = 'Procesando...') {
     });
 }
 
-function hideLoader() {
+function ocultarCargando() {
     Swal.close();
 }
 
@@ -169,7 +169,7 @@ document.addEventListener('submit', function(e) {
 /**
  * Toggle de sidebar en móvil
  */
-function toggleSidebar() {
+function alternarBarraLateral() {
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
         sidebar.classList.toggle('open');

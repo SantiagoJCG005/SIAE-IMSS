@@ -1,5 +1,5 @@
 <?php
-/**
+/** * SI FUNCIONA NO LE MUEVAS!!!!!
  * SIAE-IMSS - API de Catalogos
  * Este archivo maneja las operaciones para los catalogos del sistema.
  */
@@ -14,25 +14,25 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 
 // Verifica si el usuario ha iniciado sesion
-if (!isLoggedIn()) {
+if (!estaLogueado()) {
     // Si no ha iniciado sesion, envia error
-    jsonError('No autorizado', 401);
+    respuestaError('No autorizado', 401);
 }
 
 // Verifica que el usuario tenga rol de superadmin
-requireRole([ROL_SUPERADMIN]);
+requerirRol([ROL_SUPERADMIN]);
 
 // Obtiene conexion a la base de datos
-$pdo = getConnection();
+$conexion = obtenerConexion();
 
 // Lee los datos que vienen en formato JSON desde el cliente
-$input = json_decode(file_get_contents('php://input'), true);
+$entrada = json_decode(file_get_contents('php://input'), true);
 
 // Obtiene la accion que se quiere hacer (crear, editar, eliminar)
-$action = $input['action'] ?? '';
+$accion = $entrada['action'] ?? '';
 
 // Obtiene el nombre del catalogo que se va a usar
-$tab = $input['tab'] ?? '';
+$pestana = $entrada['tab'] ?? '';
 
 // Relaciona cada catalogo con su tabla y campos en la base de datos
 $tables = [
@@ -45,16 +45,16 @@ $tables = [
 ];
 
 // Verifica si el catalogo existe
-if (!isset($tables[$tab])) {
+if (!isset($tables[$pestana])) {
     // Si no existe, envia error
-    jsonError('Catalogo no valido');
+    respuestaError('Catalogo no valido');
 }
 
 // Guarda la configuracion del catalogo seleccionado
-$config = $tables[$tab];
+$config = $tables[$pestana];
 
 // Revisa que accion se quiere ejecutar
-switch ($action) {
+switch ($accion) {
 
     // Crear un nuevo registro
     case 'create':
@@ -68,7 +68,7 @@ switch ($action) {
         foreach ($config['fields'] as $field) {
 
             // Si ese campo viene en los datos enviados
-            if (isset($input[$field])) {
+            if (isset($entrada[$field])) {
 
                 // Guarda nombre del campo
                 $fields[] = $field;
@@ -77,36 +77,36 @@ switch ($action) {
                 $placeholders[] = '?';
 
                 // Guarda el valor del campo
-                $values[] = $input[$field];
+                $values[] = $entrada[$field];
             }
         }
         
         // Si no hay datos para guardar
         if (empty($fields)) {
-            jsonError('No hay datos para insertar');
+            respuestaError('No hay datos para insertar');
         }
         
         // Arma la consulta INSERT
         $sql = "INSERT INTO {$config['table']} (" . implode(', ', $fields) . ") VALUES (" . implode(', ', $placeholders) . ")";
 
         // Prepara la consulta
-        $stmt = $pdo->prepare($sql);
+        $consulta = $conexion->prepare($sql);
 
         // Ejecuta la consulta con los valores
-        $result = $stmt->execute($values);
+        $resultado = $consulta->execute($values);
         
         // Si se guardo correctamente
-        if ($result) {
+        if ($resultado) {
 
             // Guarda registro en bitacora
-            registrarBitacora('CREAR_CATALOGO', "Nuevo registro en $tab");
+            registrarEnBitacora('CREAR_CATALOGO', "Nuevo registro en $pestana");
 
             // Respuesta exitosa con el id creado
-            jsonSuccess(['id' => $pdo->lastInsertId()], 'Registro creado correctamente');
+            respuestaExitosa(['id' => $conexion->lastInsertId()], 'Registro creado correctamente');
 
         } else {
             // Error si falla
-            jsonError('Error al crear registro');
+            respuestaError('Error al crear registro');
         }
         break;
         
@@ -114,11 +114,11 @@ switch ($action) {
     case 'update':
 
         // Obtiene el id y lo convierte a numero
-        $id = intval($input['id'] ?? 0);
+        $id = intval($entrada['id'] ?? 0);
 
         // Si no hay id valido
         if (!$id) {
-            jsonError('ID requerido');
+            respuestaError('ID requerido');
         }
         
         // Listas para armar el UPDATE
@@ -129,19 +129,19 @@ switch ($action) {
         foreach ($config['fields'] as $field) {
 
             // Si el campo viene en los datos
-            if (isset($input[$field])) {
+            if (isset($entrada[$field])) {
 
                 // Agrega "campo = ?" a la consulta
                 $sets[] = "$field = ?";
 
                 // Guarda valor
-                $values[] = $input[$field];
+                $values[] = $entrada[$field];
             }
         }
         
         // Si no hay datos para actualizar
         if (empty($sets)) {
-            jsonError('No hay datos para actualizar');
+            respuestaError('No hay datos para actualizar');
         }
         
         // Agrega el id al final
@@ -151,23 +151,23 @@ switch ($action) {
         $sql = "UPDATE {$config['table']} SET " . implode(', ', $sets) . " WHERE {$config['id']} = ?";
 
         // Prepara consulta
-        $stmt = $pdo->prepare($sql);
+        $consulta = $conexion->prepare($sql);
 
         // Ejecuta
-        $result = $stmt->execute($values);
+        $resultado = $consulta->execute($values);
         
         // Si se actualizo bien
-        if ($result) {
+        if ($resultado) {
 
             // Guarda en bitacora
-            registrarBitacora('EDITAR_CATALOGO', "Registro editado en $tab (ID: $id)");
+            registrarEnBitacora('EDITAR_CATALOGO', "Registro editado en $pestana (ID: $id)");
 
             // Respuesta exitosa
-            jsonSuccess(null, 'Registro actualizado correctamente');
+            respuestaExitosa(null, 'Registro actualizado correctamente');
 
         } else {
             // Error
-            jsonError('Error al actualizar registro');
+            respuestaError('Error al actualizar registro');
         }
         break;
         
@@ -175,38 +175,38 @@ switch ($action) {
     case 'delete':
 
         // Obtiene el id
-        $id = intval($input['id'] ?? 0);
+        $id = intval($entrada['id'] ?? 0);
 
         // Si no es valido
         if (!$id) {
-            jsonError('ID requerido');
+            respuestaError('ID requerido');
         }
         
         // No borra el registro, solo lo marca como inactivo
         $sql = "UPDATE {$config['table']} SET activo = 0 WHERE {$config['id']} = ?";
 
         // Prepara consulta
-        $stmt = $pdo->prepare($sql);
+        $consulta = $conexion->prepare($sql);
 
         // Ejecuta
-        $result = $stmt->execute([$id]);
+        $resultado = $consulta->execute([$id]);
         
         // Si funciona
-        if ($result) {
+        if ($resultado) {
 
             // Guarda en bitacora
-            registrarBitacora('ELIMINAR_CATALOGO', "Registro desactivado en $tab (ID: $id)");
+            registrarEnBitacora('ELIMINAR_CATALOGO', "Registro desactivado en $pestana (ID: $id)");
 
             // Respuesta correcta
-            jsonSuccess(null, 'Registro eliminado correctamente');
+            respuestaExitosa(null, 'Registro eliminado correctamente');
 
         } else {
             // Error
-            jsonError('Error al eliminar registro');
+            respuestaError('Error al eliminar registro');
         }
         break;
         
     // Si la accion no existe
     default:
-        jsonError('Accion no valida');
+        respuestaError('Accion no valida');
 }

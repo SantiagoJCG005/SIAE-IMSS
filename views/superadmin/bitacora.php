@@ -1,75 +1,123 @@
 <?php
 /**
- * SIAE-IMSS - Bitácora del Sistema
+ *  * SI FUNCIONA NO LE MUEVAS!!!!!
+ * SIAE-IMSS - Bitacora del Sistema
+ * 
+ * QUE HACE ESTE ARCHIVO:
+ * Muestra el historial de todas las acciones realizadas en el sistema.
+ * Permite buscar, filtrar por fechas y tipo de accion, y exportar a CSV.
+ * Solo pueden verlo el Superadmin y la Jefa de Servicios.
  */
-$pageTitle = 'Bitácora';
 
+// Titulo que aparecera en la pestana del navegador
+$tituloPagina = 'Bitácora';
+
+// Carga el archivo de autenticacion para verificar permisos
 require_once __DIR__ . '/../../includes/auth.php';
+
+// Carga el archivo de funciones auxiliares
 require_once __DIR__ . '/../../includes/functions.php';
 
-requireRole([ROL_SUPERADMIN, ROL_JEFA_SERVICIOS]);
+// Verifica que el usuario tenga uno de los roles permitidos
+// Si no tiene permiso, lo redirige automaticamente
+requerirRol([ROL_SUPERADMIN, ROL_JEFA_SERVICIOS]);
 
-$pdo = getConnection();
+// Establece conexion con la base de datos
+$conexion = obtenerConexion();
 
-// Filtros
-$search = get('search', '');
-$accionFilter = get('accion', '');
-$fechaDesde = get('fecha_desde', '');
-$fechaHasta = get('fecha_hasta', '');
-$page = max(1, intval(get('page', 1)));
-$perPage = 20;
+// Lee el texto de busqueda de la URL, si no hay queda vacio
+$busqueda = obtenerGet('search', '');
 
-// Construir query
-$where = "WHERE 1=1";
-$params = [];
+// Lee el filtro de accion (LOGIN, CREAR, EDITAR, etc.)
+$filtroAccion = obtenerGet('accion', '');
 
-if (!empty($search)) {
-    $where .= " AND (u.username LIKE ? OR u.nombre_completo LIKE ? OR b.detalle LIKE ?)";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
-    $params[] = "%$search%";
+// Lee las fechas del filtro de rango
+$fechaDesde = obtenerGet('fecha_desde', '');
+$fechaHasta = obtenerGet('fecha_hasta', '');
+
+// Lee el numero de pagina actual, minimo 1
+$pagina = max(1, intval(obtenerGet('page', 1)));
+
+// Cantidad de registros a mostrar por pagina
+$porPagina = 20;
+
+// Inicia la construccion del WHERE con una condicion siempre verdadera
+// Esto facilita agregar mas condiciones con AND
+$condicionWhere = "WHERE 1=1";
+
+// Arreglo para guardar los valores de los parametros (evita SQL injection)
+$parametros = [];
+
+// Si hay texto de busqueda, agrega condicion para buscar en usuario y detalle
+if (!empty($busqueda)) {
+    $condicionWhere .= " AND (u.username LIKE ? OR u.nombre_completo LIKE ? OR b.detalle LIKE ?)";
+    // Los % permiten buscar el texto en cualquier parte del campo
+    $parametros[] = "%$busqueda%";
+    $parametros[] = "%$busqueda%";
+    $parametros[] = "%$busqueda%";
 }
 
-if (!empty($accionFilter)) {
-    $where .= " AND b.accion = ?";
-    $params[] = $accionFilter;
+// Si hay filtro de accion, agrega la condicion
+if (!empty($filtroAccion)) {
+    $condicionWhere .= " AND b.accion = ?";
+    $parametros[] = $filtroAccion;
 }
 
+// Si hay fecha desde, filtra registros desde esa fecha
 if (!empty($fechaDesde)) {
-    $where .= " AND DATE(b.fecha) >= ?";
-    $params[] = $fechaDesde;
+    $condicionWhere .= " AND DATE(b.fecha) >= ?";
+    $parametros[] = $fechaDesde;
 }
 
+// Si hay fecha hasta, filtra registros hasta esa fecha
 if (!empty($fechaHasta)) {
-    $where .= " AND DATE(b.fecha) <= ?";
-    $params[] = $fechaHasta;
+    $condicionWhere .= " AND DATE(b.fecha) <= ?";
+    $parametros[] = $fechaHasta;
 }
 
-// Contar total
-$countStmt = $pdo->prepare("SELECT COUNT(*) as total FROM bitacora b LEFT JOIN usuarios u ON b.id_usuario = u.id_usuario $where");
-$countStmt->execute($params);
-$total = $countStmt->fetch()['total'];
+// Prepara consulta para contar el total de registros con los filtros aplicados
+$consultaConteo = $conexion->prepare("SELECT COUNT(*) as total FROM bitacora b LEFT JOIN usuarios u ON b.id_usuario = u.id_usuario $condicionWhere");
 
-$pagination = paginate($total, $perPage, $page);
+// Ejecuta la consulta con los parametros
+$consultaConteo->execute($parametros);
 
-// Obtener registros
+// Obtiene el total de registros
+$totalRegistros = $consultaConteo->fetch()['total'];
+
+// Calcula los datos de paginacion (pagina actual, total de paginas, offset, etc.)
+$paginacion = paginar($totalRegistros, $porPagina, $pagina);
+
+// Construye la consulta principal para obtener los registros
+// LEFT JOIN une con usuarios para obtener nombre y username
+// ORDER BY fecha DESC ordena del mas reciente al mas antiguo
+// LIMIT y OFFSET controlan la paginacion
 $sql = "
     SELECT b.*, u.nombre_completo, u.username 
     FROM bitacora b 
     LEFT JOIN usuarios u ON b.id_usuario = u.id_usuario 
-    $where 
+    $condicionWhere 
     ORDER BY b.fecha DESC 
-    LIMIT {$pagination['per_page']} OFFSET {$pagination['offset']}
+    LIMIT {$paginacion['per_page']} OFFSET {$paginacion['offset']}
 ";
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$registros = $stmt->fetchAll();
 
-// Obtener acciones únicas para filtro
-$accionesStmt = $pdo->query("SELECT DISTINCT accion FROM bitacora ORDER BY accion");
-$acciones = $accionesStmt->fetchAll(PDO::FETCH_COLUMN);
+// Prepara y ejecuta la consulta
+$consulta = $conexion->prepare($sql);
+$consulta->execute($parametros);
 
+// Obtiene todos los registros como arreglo
+$listaRegistros = $consulta->fetchAll();
+
+// Obtiene la lista de acciones unicas para el menu desplegable de filtro
+// DISTINCT evita duplicados
+$accionesStmt = $conexion->query("SELECT DISTINCT accion FROM bitacora ORDER BY accion");
+
+// Convierte los resultados en un arreglo simple de valores
+$listaAcciones = $accionesStmt->fetchAll(PDO::FETCH_COLUMN);
+
+// Incluye el header de la pagina (head, estilos, scripts)
 include __DIR__ . '/../layouts/header.php';
+
+// Incluye el menu lateral del superadmin
 include __DIR__ . '/../layouts/sidebar-superadmin.php';
 ?>
 
@@ -90,27 +138,33 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
     <div class="filter-group" style="flex: 2;">
         <div class="header-search" style="width: 100%;">
             <i data-lucide="search"></i>
+            <?php // El valor actual de busqueda se muestra en el campo ?>
+            <?php // onkeyup ejecuta la busqueda con retraso cada vez que se escribe ?>
             <input type="text" 
                    id="searchInput"
                    placeholder="Buscar por usuario o detalle..." 
-                   value="<?= htmlspecialchars($search) ?>"
-                   onkeyup="debounceSearch(this.value)">
+                   value="<?= htmlspecialchars($busqueda) ?>"
+                   onkeyup="busquedaConRetraso(this.value)">
         </div>
     </div>
     <div class="filter-group">
+        <?php // Menu desplegable con las acciones disponibles ?>
         <select class="form-control form-select" id="accionFilter" onchange="filtrar()">
             <option value="">Todas las acciones</option>
-            <?php foreach ($acciones as $accion): ?>
-            <option value="<?= htmlspecialchars($accion) ?>" <?= $accionFilter === $accion ? 'selected' : '' ?>>
+            <?php // Recorre cada accion y crea una opcion, marcando como selected la actual ?>
+            <?php foreach ($listaAcciones as $accion): ?>
+            <option value="<?= htmlspecialchars($accion) ?>" <?= $filtroAccion === $accion ? 'selected' : '' ?>>
                 <?= htmlspecialchars($accion) ?>
             </option>
             <?php endforeach; ?>
         </select>
     </div>
     <div class="filter-group">
+        <?php // Campo de fecha inicial con el valor actual ?>
         <input type="date" class="form-control" id="fechaDesde" value="<?= $fechaDesde ?>" onchange="filtrar()" placeholder="Desde">
     </div>
     <div class="filter-group">
+        <?php // Campo de fecha final con el valor actual ?>
         <input type="date" class="form-control" id="fechaHasta" value="<?= $fechaHasta ?>" onchange="filtrar()" placeholder="Hasta">
     </div>
 </div>
@@ -129,7 +183,8 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                 </tr>
             </thead>
             <tbody>
-                <?php if (empty($registros)): ?>
+                <?php // Si no hay registros, muestra mensaje de tabla vacia ?>
+                <?php if (empty($listaRegistros)): ?>
                 <tr>
                     <td colspan="5">
                         <div class="empty-state">
@@ -140,16 +195,20 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                     </td>
                 </tr>
                 <?php else: ?>
-                    <?php foreach ($registros as $registro): ?>
+                    <?php // Recorre cada registro y crea una fila en la tabla ?>
+                    <?php foreach ($listaRegistros as $registro): ?>
                     <tr>
                         <td>
-                            <div style="font-size: 13px;"><?= formatDateTime($registro['fecha']) ?></div>
+                            <?php // Formatea la fecha a un formato legible ?>
+                            <div style="font-size: 13px;"><?= formatearFechaTime($registro['fecha']) ?></div>
                         </td>
                         <td>
+                            <?php // Si hay nombre de usuario, muestra avatar e info ?>
                             <?php if ($registro['nombre_completo']): ?>
                             <div class="d-flex align-center gap-2">
-                                <div class="avatar avatar-sm" style="background: <?= getAvatarColor($registro['nombre_completo']) ?>">
-                                    <?= getInitials($registro['nombre_completo']) ?>
+                                <?php // Avatar con color generado e iniciales ?>
+                                <div class="avatar avatar-sm" style="background: <?= obtenerColorAvatar($registro['nombre_completo']) ?>">
+                                    <?= obtenerIniciales($registro['nombre_completo']) ?>
                                 </div>
                                 <div>
                                     <div style="font-weight: 500;"><?= htmlspecialchars($registro['nombre_completo']) ?></div>
@@ -157,28 +216,46 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                                 </div>
                             </div>
                             <?php else: ?>
+                            <?php // Si no hay usuario, fue una accion del sistema ?>
                             <span class="text-muted">Sistema</span>
                             <?php endif; ?>
                         </td>
                         <td>
                             <?php
-                            $badgeClass = 'badge-secondary';
+                            // Determina el color de la etiqueta segun el tipo de accion
+                            $badgeClass = 'badge-secondary';  // Color por defecto (gris)
+
+                            // Verde para acciones de login
                             if (strpos($registro['accion'], 'LOGIN') !== false) $badgeClass = 'badge-success';
+
+                            // Azul para acciones de crear
                             elseif (strpos($registro['accion'], 'CREAR') !== false || strpos($registro['accion'], 'ALTA') !== false) $badgeClass = 'badge-info';
+
+                            // Amarillo para acciones de editar
                             elseif (strpos($registro['accion'], 'EDITAR') !== false) $badgeClass = 'badge-warning';
+
+                            // Rojo para acciones de eliminar o bajas
                             elseif (strpos($registro['accion'], 'ELIMINAR') !== false || strpos($registro['accion'], 'BAJA') !== false) $badgeClass = 'badge-danger';
+
+                            // Azul para exportaciones
                             elseif (strpos($registro['accion'], 'EXPORTAR') !== false) $badgeClass = 'badge-info';
+
+                            // Gris para logout
                             elseif (strpos($registro['accion'], 'LOGOUT') !== false) $badgeClass = 'badge-secondary';
+
+                            // Rojo para intentos fallidos
                             elseif (strpos($registro['accion'], 'FALLIDO') !== false) $badgeClass = 'badge-danger';
                             ?>
                             <span class="badge <?= $badgeClass ?>"><?= htmlspecialchars($registro['accion']) ?></span>
                         </td>
                         <td>
+                            <?php // Muestra el detalle truncado, el title muestra el texto completo al pasar el mouse ?>
                             <div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?= htmlspecialchars($registro['detalle']) ?>">
                                 <?= htmlspecialchars($registro['detalle'] ?: '-') ?>
                             </div>
                         </td>
                         <td>
+                            <?php // Muestra la direccion IP con estilo de codigo ?>
                             <code style="font-size: 12px; background: var(--bg-secondary); padding: 2px 6px; border-radius: 4px;">
                                 <?= htmlspecialchars($registro['ip_address'] ?: '-') ?>
                             </code>
@@ -191,33 +268,43 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
     </div>
     
     <!-- Paginación -->
-    <?php if ($pagination['total_pages'] > 1): ?>
+    <?php // Solo muestra paginacion si hay mas de una pagina ?>
+    <?php if ($paginacion['total_pages'] > 1): ?>
     <div class="card-footer" style="display: flex; justify-content: space-between; align-items: center;">
         <div class="pagination-info">
-            Mostrando <?= $pagination['offset'] + 1 ?> - <?= min($pagination['offset'] + $perPage, $total) ?> de <?= number_format($total) ?> registros
+            <?php // Muestra el rango de registros actual y el total ?>
+            Mostrando <?= $paginacion['offset'] + 1 ?> - <?= min($paginacion['offset'] + $porPagina, $totalRegistros) ?> de <?= number_format($totalRegistros) ?> registros
         </div>
         <div class="pagination">
-            <button class="pagination-btn" onclick="goToPage(1)" <?= !$pagination['has_prev'] ? 'disabled' : '' ?>>
+            <?php // Boton para ir a la primera pagina ?>
+            <button class="pagination-btn" onclick="irAPagina(1)" <?= !$paginacion['has_prev'] ? 'disabled' : '' ?>>
                 <i data-lucide="chevrons-left"></i>
             </button>
-            <button class="pagination-btn" onclick="goToPage(<?= $page - 1 ?>)" <?= !$pagination['has_prev'] ? 'disabled' : '' ?>>
+            <?php // Boton para ir a la pagina anterior ?>
+            <button class="pagination-btn" onclick="irAPagina(<?= $pagina - 1 ?>)" <?= !$paginacion['has_prev'] ? 'disabled' : '' ?>>
                 <i data-lucide="chevron-left"></i>
             </button>
             
             <?php
-            $start = max(1, $page - 2);
-            $end = min($pagination['total_pages'], $page + 2);
+            // Calcula el rango de paginas a mostrar (2 antes y 2 despues de la actual)
+            $start = max(1, $pagina - 2);
+            $end = min($paginacion['total_pages'], $pagina + 2);
+
+            // Crea un boton por cada pagina en el rango
             for ($i = $start; $i <= $end; $i++):
             ?>
-            <button class="pagination-btn <?= $i == $page ? 'active' : '' ?>" onclick="goToPage(<?= $i ?>)">
+            <?php // La pagina actual tiene la clase 'active' ?>
+            <button class="pagination-btn <?= $i == $pagina ? 'active' : '' ?>" onclick="irAPagina(<?= $i ?>)">
                 <?= $i ?>
             </button>
             <?php endfor; ?>
             
-            <button class="pagination-btn" onclick="goToPage(<?= $page + 1 ?>)" <?= !$pagination['has_next'] ? 'disabled' : '' ?>>
+            <?php // Boton para ir a la pagina siguiente ?>
+            <button class="pagination-btn" onclick="irAPagina(<?= $pagina + 1 ?>)" <?= !$paginacion['has_next'] ? 'disabled' : '' ?>>
                 <i data-lucide="chevron-right"></i>
             </button>
-            <button class="pagination-btn" onclick="goToPage(<?= $pagination['total_pages'] ?>)" <?= !$pagination['has_next'] ? 'disabled' : '' ?>>
+            <?php // Boton para ir a la ultima pagina ?>
+            <button class="pagination-btn" onclick="irAPagina(<?= $paginacion['total_pages'] ?>)" <?= !$paginacion['has_next'] ? 'disabled' : '' ?>>
                 <i data-lucide="chevrons-right"></i>
             </button>
         </div>
@@ -226,54 +313,97 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
 </div>
 
 <script>
-let searchTimeout;
+// Variable para guardar el temporizador de busqueda
+let tiempoEsperaBusqueda;
 
-function debounceSearch(value) {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
+// Funcion que retrasa la busqueda para no ejecutarla con cada tecla
+// Espera 500ms despues de que el usuario deja de escribir
+function busquedaConRetraso(value) {
+
+    // Cancela cualquier busqueda pendiente anterior
+    clearTimeout(tiempoEsperaBusqueda);
+
+    // Programa una nueva busqueda en 500 milisegundos
+    tiempoEsperaBusqueda = setTimeout(() => {
+
+        // Obtiene la URL actual de la pagina
         const url = new URL(window.location);
+
+        // Si hay texto, agrega el parametro search a la URL
         if (value) {
             url.searchParams.set('search', value);
         } else {
+            // Si esta vacio, quita el parametro
             url.searchParams.delete('search');
         }
+
+        // Regresa a la pagina 1 porque los resultados cambiaron
         url.searchParams.set('page', 1);
+
+        // Recarga la pagina con los nuevos parametros
         window.location = url;
     }, 500);
 }
 
+// Funcion que aplica los filtros de accion y fechas
 function filtrar() {
+
+    // Obtiene la URL actual
     const url = new URL(window.location);
     
+    // Lee los valores de los campos de filtro
     const accion = document.getElementById('accionFilter').value;
     const fechaDesde = document.getElementById('fechaDesde').value;
     const fechaHasta = document.getElementById('fechaHasta').value;
     
+    // Si hay accion seleccionada, la agrega a la URL, si no la quita
     if (accion) url.searchParams.set('accion', accion);
     else url.searchParams.delete('accion');
     
+    // Lo mismo para fecha desde
     if (fechaDesde) url.searchParams.set('fecha_desde', fechaDesde);
     else url.searchParams.delete('fecha_desde');
     
+    // Lo mismo para fecha hasta
     if (fechaHasta) url.searchParams.set('fecha_hasta', fechaHasta);
     else url.searchParams.delete('fecha_hasta');
     
+    // Regresa a la pagina 1
     url.searchParams.set('page', 1);
+
+    // Recarga la pagina con los filtros aplicados
     window.location = url;
 }
 
-function goToPage(page) {
+// Funcion que navega a una pagina especifica
+function irAPagina(page) {
+
+    // Obtiene la URL actual
     const url = new URL(window.location);
+
+    // Cambia el numero de pagina
     url.searchParams.set('page', page);
+
+    // Navega a esa pagina
     window.location = url;
 }
 
+// Funcion que inicia la descarga del archivo CSV
 function exportarBitacora() {
+
+    // Obtiene la URL actual con los filtros aplicados
     const url = new URL(window.location);
-    url.pathname = '<?= BASE_URL ?>api/bitacora.php';
+
+    // Cambia la ruta al archivo de la API que genera el CSV
+    url.pathname = '<?= URL_BASE ?>api/bitacora.php';
+
+    // Agrega el parametro que indica que queremos exportar
     url.searchParams.set('action', 'export');
+
+    // Navega a esa URL, lo que inicia la descarga
     window.location = url;
 }
 </script>
 
+<?php // Incluye el footer de la pagina ?>
 <?php include __DIR__ . '/../layouts/footer.php'; ?>
