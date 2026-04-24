@@ -14,7 +14,7 @@ requerirRol([ROL_JEFA_SERVICIOS, ROL_ADMIN_SERVICIOS, ROL_SUPERADMIN]);
 $idTabla = intval(obtenerGet('id', 0));
 
 if ($idTabla <= 0) {
-    header('Location: ' . URL_BASE . 'views/jefa/carpetas.php');
+    header('Location: ' . URL_BASE . 'views/admin-se/carpetas.php');
     exit;
 }
 
@@ -33,7 +33,7 @@ $consulta->execute([$idTabla]);
 $tabla = $consulta->fetch();
 
 if (!$tabla) {
-    header('Location: ' . URL_BASE . 'views/jefa/carpetas.php');
+    header('Location: ' . URL_BASE . 'views/admin-se/carpetas.php');
     exit;
 }
 
@@ -53,13 +53,13 @@ $datosPatronales = [
 ];
 
 include __DIR__ . '/../layouts/header.php';
-include __DIR__ . '/../layouts/sidebar-jefa.php';
+include __DIR__ . '/../layouts/sidebar-admin-se.php';
 ?>
 
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
     <div>
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-            <a href="<?= URL_BASE ?>views/jefa/carpetas.php" class="btn btn-ghost btn-sm">
+            <a href="<?= URL_BASE ?>views/admin-se/carpetas.php" class="btn btn-ghost btn-sm">
                 <i data-lucide="arrow-left"></i> Volver
             </a>
         </div>
@@ -183,7 +183,7 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
         <i data-lucide="trash-2"></i> Eliminar Tabla
     </button>
     <div style="display: flex; gap: 12px;">
-        <a href="<?= URL_BASE ?>views/jefa/resultados.php?id=<?= $idTabla ?>" class="btn btn-outline">
+        <a href="<?= URL_BASE ?>views/admin-se/resultados.php?id=<?= $idTabla ?>" class="btn btn-outline">
             <i data-lucide="file-text"></i> Ver Resultados
         </a>
         <?php if ($esEnviado): ?>
@@ -1116,7 +1116,7 @@ async function eliminarTablaCompleta() {
     if (result.isConfirmed) {
         const resp = await llamarApi(API_URL, { method: 'POST', body: JSON.stringify({ action: 'eliminar_tabla', id_tabla: ID_TABLA }) });
         if (resp && resp.success) {
-            window.location.href = '<?= URL_BASE ?>views/jefa/carpetas.php';
+            window.location.href = '<?= URL_BASE ?>views/admin-se/carpetas.php';
         } else {
             mostrarNotificacion(resp?.message || 'Error al eliminar', 'error');
         }

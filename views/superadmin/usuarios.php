@@ -357,16 +357,16 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                     <div class="form-group">
-                        <label class="form-label">Apellido Paterno *</label>
+                        <label class="form-label">Primer Apellido *</label>
                         <input type="text" name="apellido_paterno" id="apellido_paterno" class="form-control" 
                                maxlength="50" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+" 
                                title="Solo letras" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Apellido Materno *</label>
+                        <label class="form-label">Segundo Apellido</label>
                         <input type="text" name="apellido_materno" id="apellido_materno" class="form-control" 
-                               maxlength="50" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+" 
-                               title="Solo letras" required>
+                               maxlength="50" pattern="[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]*" 
+                               title="Solo letras">
                     </div>
                 </div>
                 
@@ -590,7 +590,9 @@ async function guardarUsuario(e) {
         nombreCompleto += ' ' + data.segundo_nombre.trim();
     }
     nombreCompleto += ' ' + data.apellido_paterno.trim();
-    nombreCompleto += ' ' + data.apellido_materno.trim();
+    if (data.apellido_materno && data.apellido_materno.trim()) {
+        nombreCompleto += ' ' + data.apellido_materno.trim();
+    }
     
     // Agrega el nombre completo a los datos
     data.nombre_completo = nombreCompleto;

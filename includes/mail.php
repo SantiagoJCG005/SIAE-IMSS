@@ -283,3 +283,83 @@ function plantillaCorreoPrueba() {
     </body>
     </html>';
 }
+
+/**
+ * Genera plantilla HTML para notificación de exportación TXT
+ */
+function plantillaCorreoExportacion($nombreJefa, $nombreAdmin, $rolAdmin, $tablaNombre, $tipoMov, $registros, $archivo, $fechaHora, $ip) {
+    $colorTipo = $tipoMov === 'ALTA' ? '#22c55e' : '#ef4444';
+    $iconoTipo = $tipoMov === 'ALTA' ? '📈' : '📉';
+    
+    return '
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .header { background: #1a2744; color: white; padding: 25px; text-align: center; }
+            .header h1 { margin: 0; font-size: 22px; }
+            .content { padding: 30px; }
+            .alert-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 0 0 20px 0; border-radius: 0 6px 6px 0; }
+            .info-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            .info-table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
+            .info-table td:first-child { color: #64748b; width: 140px; }
+            .info-table td:last-child { font-weight: 500; }
+            .badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: white; }
+            .footer { background: #f8fafc; padding: 20px; text-align: center; color: #64748b; font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>📤 Notificación de Exportación</h1>
+                <p style="margin: 10px 0 0 0; opacity: 0.9;">SIAE-IMSS</p>
+            </div>
+            <div class="content">
+                <p>Hola <strong>' . htmlspecialchars($nombreJefa) . '</strong>,</p>
+                
+                <div class="alert-box">
+                    <strong>' . htmlspecialchars($nombreAdmin) . '</strong> (' . htmlspecialchars($rolAdmin) . ') ha exportado un archivo TXT para el IMSS.
+                </div>
+                
+                <table class="info-table">
+                    <tr>
+                        <td>Tabla:</td>
+                        <td>' . htmlspecialchars($tablaNombre) . '</td>
+                    </tr>
+                    <tr>
+                        <td>Tipo de movimiento:</td>
+                        <td><span class="badge" style="background: ' . $colorTipo . ';">' . $iconoTipo . ' ' . $tipoMov . '</span></td>
+                    </tr>
+                    <tr>
+                        <td>Registros:</td>
+                        <td>' . $registros . ' alumnos</td>
+                    </tr>
+                    <tr>
+                        <td>Archivo generado:</td>
+                        <td><code style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">' . htmlspecialchars($archivo) . '</code></td>
+                    </tr>
+                    <tr>
+                        <td>Fecha y hora:</td>
+                        <td>' . $fechaHora . '</td>
+                    </tr>
+                    <tr>
+                        <td>IP:</td>
+                        <td>' . htmlspecialchars($ip) . '</td>
+                    </tr>
+                </table>
+                
+                <p style="color: #64748b; font-size: 14px;">
+                    Puedes revisar esta exportación en el sistema y marcarla como ✓ Revisada o ⚠️ Problema si detectas algún error.
+                </p>
+            </div>
+            <div class="footer">
+                <p>Este es un correo automático generado por SIAE-IMSS.</p>
+                <p>© ' . date('Y') . ' - Tecnológico de Chetumal</p>
+            </div>
+        </div>
+    </body>
+    </html>';
+}

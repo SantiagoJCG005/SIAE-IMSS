@@ -35,18 +35,7 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
         </div>
     </div>
     
-    <!-- Usuario -->
-    <div class="sidebar-user">
-        <?php // Muestra el avatar con el color generado y las iniciales del usuario ?>
-        <div class="sidebar-user-avatar" style="background: <?= $avatarColor ?>">
-            <?= $userInitials ?>
-        </div>
-        <div class="sidebar-user-info">
-            <?php // htmlspecialchars protege contra ataques XSS al mostrar texto del usuario ?>
-            <div class="sidebar-user-name"><?= htmlspecialchars($currentUser['nombre_completo'] ?? 'Usuario') ?></div>
-            <div class="sidebar-user-role"><?= htmlspecialchars($currentUser['rol_nombre'] ?? 'Superadmin') ?></div>
-        </div>
-    </div>
+   
     
     <!-- Navegación -->
     <nav class="sidebar-nav">

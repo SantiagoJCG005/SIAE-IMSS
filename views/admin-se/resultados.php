@@ -14,7 +14,7 @@ requerirRol([ROL_JEFA_SERVICIOS, ROL_ADMIN_SERVICIOS, ROL_SUPERADMIN]);
 $idTabla = intval(obtenerGet('id', 0));
 
 if ($idTabla <= 0) {
-    header('Location: ' . URL_BASE . 'views/jefa/carpetas.php');
+    header('Location: ' . URL_BASE . 'views/admin-se/carpetas.php');
     exit;
 }
 
@@ -31,7 +31,7 @@ $consulta->execute([$idTabla]);
 $tabla = $consulta->fetch();
 
 if (!$tabla) {
-    header('Location: ' . URL_BASE . 'views/jefa/carpetas.php');
+    header('Location: ' . URL_BASE . 'views/admin-se/carpetas.php');
     exit;
 }
 
@@ -49,14 +49,14 @@ $datosPatronales = [
 ];
 
 include __DIR__ . '/../layouts/header.php';
-include __DIR__ . '/../layouts/sidebar-jefa.php';
+include __DIR__ . '/../layouts/sidebar-admin-se.php';
 ?>
 
 <!-- Título arriba -->
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
     <div>
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
-            <a href="<?= URL_BASE ?>views/jefa/tabla.php?id=<?= $idTabla ?>" class="btn btn-ghost btn-sm">
+            <a href="<?= URL_BASE ?>views/admin-se/tabla.php?id=<?= $idTabla ?>" class="btn btn-ghost btn-sm">
                 <i data-lucide="arrow-left"></i> Volver a Tabla
             </a>
         </div>

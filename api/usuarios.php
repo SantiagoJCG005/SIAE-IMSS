@@ -12,6 +12,9 @@ require_once __DIR__ . '/../includes/auth.php';
 // Incluye funciones generales (conexion, utilidades, etc)
 require_once __DIR__ . '/../includes/functions.php';
 
+// Incluye funciones de correo
+require_once __DIR__ . '/../includes/mail.php';
+
 // Verifica si el usuario ha iniciado sesion
 if (!estaLogueado()) {
     // Si no ha iniciado sesion, envia error
@@ -118,6 +121,33 @@ switch ($accion) {
         // Si se creo correctamente
         if ($resultado) {
             registrarEnBitacora('CREAR_USUARIO', "Usuario creado: $username");
+            
+            // Construir URL absoluta para el login
+            $protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
+            $dominio = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $urlLogin = $protocolo . $dominio . URL_BASE . "views/auth/login.php";
+
+            // Enviar correo con credenciales
+            $cuerpo = "
+                <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;'>
+                    <h2 style='color: #2563EB;'>¡Bienvenido a SIAE-IMSS!</h2>
+                    <p>Hola <strong>{$nombre}</strong>,</p>
+                    <p>Tu cuenta ha sido creada exitosamente por un administrador. A continuacion te proporcionamos tus datos de acceso:</p>
+                    <div style='background-color: #F3F4F6; padding: 15px; border-radius: 6px; margin: 20px 0;'>
+                        <p style='margin: 5px 0;'><strong>Usuario:</strong> {$username}</p>
+                        <p style='margin: 5px 0;'><strong>Contraseña:</strong> {$password}</p>
+                    </div>
+                    <p>Te recomendamos guardar esta informacion en un lugar seguro. Si alguna vez olvidas tu contrasena, podras recuperarla desde la pantalla de inicio.</p>
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <a href='{$urlLogin}' style='background-color: #2563EB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;'>Iniciar Sesion Ahora</a>
+                    </div>
+                    <hr style='border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;'>
+                    <p style='font-size: 12px; color: #9CA3AF; text-align: center;'>Sistema SIAE-IMSS. Este es un correo automatico, por favor no respondas.</p>
+                </div>
+            ";
+            
+            enviarCorreo($email, "Tus credenciales de acceso - SIAE-IMSS", $cuerpo);
+            
             respuestaExitosa(['id' => $conexion->lastInsertId()], 'Usuario creado correctamente');
         } else {
             respuestaError('Error al crear usuario');

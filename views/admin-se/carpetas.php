@@ -25,7 +25,7 @@ $abrirModalCarpeta = obtenerGet('nueva', '') === '1';
 include __DIR__ . '/../layouts/header.php';
 
 // Incluye sidebar
-include __DIR__ . '/../layouts/sidebar-jefa.php';
+include __DIR__ . '/../layouts/sidebar-admin-se.php';
 ?>
 
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -420,7 +420,6 @@ function generarHtmlCarpeta(carpeta) {
                         <div class="carpeta-nombre">${escapeHtml(carpeta.nombre)}</div>
                         <div class="carpeta-meta">
                             ${carpeta.total_subcarpetas} subcarpeta(s) • Creado: ${formatearFecha(carpeta.fecha_creacion)}
-                            ${carpeta.creador ? `<br>👤 Por: <strong>${escapeHtml(carpeta.creador.split(' ').slice(0, 2).join(' '))}</strong> <span style="font-size: 11px; color: var(--text-muted);">(${escapeHtml(carpeta.creador_rol || '')})</span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -506,7 +505,7 @@ function generarHtmlTabla(tabla) {
     let acciones = '';
     
     // Boton ver siempre
-    acciones += `<a href="<?= URL_BASE ?>views/jefa/tabla.php?id=${tabla.id_tabla}" class="btn btn-ghost btn-sm btn-icon" title="Ver"><i data-lucide="eye"></i></a>`;
+    acciones += `<a href="<?= URL_BASE ?>views/admin-se/tabla.php?id=${tabla.id_tabla}" class="btn btn-ghost btn-sm btn-icon" title="Ver"><i data-lucide="eye"></i></a>`;
     
     // Si esta enviado, boton descargar TXT
     if (tabla.estado === 'enviado') {
@@ -743,7 +742,7 @@ async function guardarTabla(evento) {
         mostrarNotificacion(respuesta.message);
         cerrarModalTabla();
         // Redirige a la tabla creada
-        window.location.href = '<?= URL_BASE ?>views/jefa/tabla.php?id=' + respuesta.data.id_tabla;
+        window.location.href = '<?= URL_BASE ?>views/admin-se/tabla.php?id=' + respuesta.data.id_tabla;
     } else {
         mostrarNotificacion(respuesta?.message || 'Error al crear tabla', 'error');
     }

@@ -466,7 +466,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </form>
                 
                 <div class="texto-pie-formulario">
-                    Instituto Mexicano del Seguro Social
+                    INSTITUTO TECNOLOGICO DE CHETUMAL
                 </div>
             </div>
         </div>

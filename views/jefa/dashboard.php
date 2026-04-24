@@ -77,10 +77,12 @@ try {
 $ultimasTablas = [];
 try {
     $consulta = $conexion->query("
-        SELECT t.*, s.nombre as subcarpeta_nombre, c.nombre as carpeta_nombre
+        SELECT t.*, s.nombre as subcarpeta_nombre, c.nombre as carpeta_nombre, u.nombre_completo as creador, r.nombre as creador_rol
         FROM tablas_movimientos t
         INNER JOIN subcarpetas_imss s ON t.id_subcarpeta = s.id_subcarpeta
         INNER JOIN carpetas_imss c ON s.id_carpeta = c.id_carpeta
+        LEFT JOIN usuarios u ON t.id_usuario_creacion = u.id_usuario
+        LEFT JOIN roles r ON u.id_rol = r.id_rol
         ORDER BY t.fecha_creacion DESC
         LIMIT 5
     ");
@@ -170,6 +172,7 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
                 <thead>
                     <tr>
                         <th>Nombre</th>
+                        <th>Creador</th>
                         <th>Tipo</th>
                         <th>Estado</th>
                         <th>Fecha</th>
@@ -182,6 +185,16 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
                             <strong><?= htmlspecialchars($tabla['nombre']) ?></strong>
                             <br>
                             <small class="text-muted"><?= htmlspecialchars($tabla['carpeta_nombre']) ?> › <?= htmlspecialchars($tabla['subcarpeta_nombre']) ?></small>
+                        </td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <i data-lucide="user" style="width: 14px; height: 14px; color: var(--text-muted);"></i>
+                                <div style="line-height: 1.2;">
+                                    <span><?= htmlspecialchars(implode(' ', array_slice(explode(' ', $tabla['creador'] ?? 'Desconocido'), 0, 2))) ?></span>
+                                    <br>
+                                    <small class="text-muted" style="font-size: 11px;"><?= htmlspecialchars($tabla['creador_rol'] ?? 'Admin') ?></small>
+                                </div>
+                            </div>
                         </td>
                         <td>
                             <?php if ($tabla['tipo'] === 'alta'): ?>

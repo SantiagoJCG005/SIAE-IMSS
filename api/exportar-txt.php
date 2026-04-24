@@ -13,6 +13,7 @@
 // Carga archivos necesarios
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/mail.php';
 
 // Verifica autenticacion
 if (!estaLogueado()) {
@@ -20,11 +21,15 @@ if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
-// Solo Jefa de Servicios o Superadmin puede exportar
-if (!tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+// Roles permitidos: Superadmin, Jefa de Servicios, Admin Servicios
+$rolesPermitidos = [ROL_SUPERADMIN, ROL_JEFA_SERVICIOS, ROL_ADMIN_SERVICIOS];
+if (!tieneAlgunRol($rolesPermitidos)) {
     header('Content-Type: application/json');
     respuestaError('Sin permisos para exportar', 403);
 }
+
+// Determinar si es Admin SE (para notificar a Jefa)
+$esAdminSE = tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN);
 
 // Conexion a la base de datos
 $conexion = obtenerConexion();
@@ -282,6 +287,11 @@ switch ($accion) {
             // Registrar en bitácora
             registrarEnBitacora('EXPORTAR_TXT', "TXT generado: $nombreArchivo (Tabla ID: $idTabla, $totalAlumnos registros)");
             
+            // Si es Admin SE, notificar a la Jefa de Servicios
+            if ($esAdminSE) {
+                notificarExportacionAJefa($conexion, $idTabla, $tabla, $nombreArchivo, $totalAlumnos);
+            }
+            
             // Generar contenido con saltos de línea Windows (CRLF)
             $contenido = implode("\r\n", $lineas);
             
@@ -327,13 +337,14 @@ switch ($accion) {
             
             $preview = [];
             $esAlta = $tabla['tipo'] === 'alta';
+            $fechaMovFormat = date('dmY', strtotime($tabla['fecha_movimiento']));
             
             foreach ($alumnos as $alumno) {
-                $preview[] = [
-                    'nss' => $alumno['numero_afiliacion'] . '-' . $alumno['digito_verificador'],
-                    'nombre' => $alumno['apellido_paterno'] . ' ' . $alumno['apellido_materno'] . ' ' . $alumno['nombres'],
-                    'cuenta' => $alumno['numero_cuenta']
-                ];
+                if ($esAlta) {
+                    $preview[] = generarLineaAlta($alumno, $configPatronal, $fechaMovFormat);
+                } else {
+                    $preview[] = generarLineaBaja($alumno, $configPatronal, $fechaMovFormat);
+                }
             }
             
             respuestaExitosa([
@@ -352,4 +363,98 @@ switch ($accion) {
     default:
         header('Content-Type: application/json');
         respuestaError('Accion no valida', 400);
+}
+
+/**
+ * Notifica a la Jefa de Servicios cuando un Admin SE exporta un TXT
+ * Crea notificación interna + envía email
+ */
+function notificarExportacionAJefa($conexion, $idTabla, $tabla, $nombreArchivo, $totalRegistros) {
+    try {
+        $usuarioActual = $_SESSION['usuario'];
+        
+        // Buscar usuarios con rol Jefa de Servicios
+        $consulta = $conexion->prepare("
+            SELECT id_usuario, nombre_completo, email 
+            FROM usuarios 
+            WHERE id_rol = ? AND activo = 1
+        ");
+        $consulta->execute([ROL_JEFA_SERVICIOS]);
+        $jefas = $consulta->fetchAll();
+        
+        if (empty($jefas)) {
+            return; // No hay Jefas activas
+        }
+        
+        $tipoMov = $tabla['tipo'] === 'alta' ? 'ALTA' : 'BAJA';
+        $fechaMov = date('d/m/Y', strtotime($tabla['fecha_movimiento']));
+        $fechaHora = date('d/m/Y H:i:s');
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'Desconocida';
+        
+        // Datos para la notificación
+        $titulo = "📤 Exportación TXT por Admin SE";
+        $mensaje = "{$usuarioActual['nombre_completo']} ha exportado el archivo TXT.\n\n" .
+                   "• Tabla: {$tabla['nombre']}\n" .
+                   "• Tipo: {$tipoMov}\n" .
+                   "• Registros: {$totalRegistros}\n" .
+                   "• Archivo: {$nombreArchivo}\n" .
+                   "• Fecha/Hora: {$fechaHora}";
+        
+        $datosExtra = [
+            'archivo' => $nombreArchivo,
+            'tipo' => $tabla['tipo'],
+            'registros' => $totalRegistros,
+            'tabla_nombre' => $tabla['nombre'],
+            'fecha_movimiento' => $tabla['fecha_movimiento'],
+            'exportado_por' => $usuarioActual['nombre_completo'],
+            'ip' => $ip
+        ];
+        
+        // Crear notificación para cada Jefa
+        foreach ($jefas as $jefa) {
+            // Notificación interna
+            $insert = $conexion->prepare("
+                INSERT INTO notificaciones 
+                (id_usuario_destino, id_usuario_origen, tipo, titulo, mensaje, referencia_tipo, referencia_id, datos_extra)
+                VALUES (?, ?, 'exportacion_txt', ?, ?, 'tablas_movimientos', ?, ?)
+            ");
+            $insert->execute([
+                $jefa['id_usuario'],
+                $usuarioActual['id_usuario'],
+                $titulo,
+                $mensaje,
+                $idTabla,
+                json_encode($datosExtra)
+            ]);
+            
+            // Obtener rol
+            $idRolUsuario = $usuarioActual['id_rol'];
+            $consultaRol = $conexion->prepare("SELECT nombre FROM roles WHERE id_rol = ?");
+            $consultaRol->execute([$idRolUsuario]);
+            $rolAdmin = $consultaRol->fetchColumn() ?: 'Usuario';
+            
+            // Enviar email
+            if (!empty($jefa['email'])) {
+                $asuntoEmail = "[SIAE-IMSS] Exportación TXT realizada por {$usuarioActual['nombre_completo']}";
+                $cuerpoEmail = plantillaCorreoExportacion(
+                    $jefa['nombre_completo'],
+                    $usuarioActual['nombre_completo'],
+                    $rolAdmin,
+                    $tabla['nombre'],
+                    $tipoMov,
+                    $totalRegistros,
+                    $nombreArchivo,
+                    $fechaHora,
+                    $ip
+                );
+                
+                // Enviar email (no bloquea si falla)
+                @enviarCorreo($jefa['email'], $asuntoEmail, $cuerpoEmail);
+            }
+        }
+        
+    } catch (Exception $e) {
+        // Registrar error pero no interrumpir la exportación
+        error_log('Error al notificar exportación: ' . $e->getMessage());
+    }
 }

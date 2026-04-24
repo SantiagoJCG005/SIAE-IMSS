@@ -265,9 +265,9 @@ function generarLineaResultado($alumno, $configPatronal, $esAlta, $fechaMovimien
 // Ejecuta segun la accion
 switch ($accion) {
     
-    // ========================================
+   
     // TABLAS DE MOVIMIENTOS
-    // ========================================
+
     
     // Crear nueva tabla de movimientos
     case 'crear_tabla':
@@ -350,6 +350,15 @@ switch ($accion) {
                 respuestaError('Tabla no encontrada');
             }
             
+            
+            // Si el usuario es Admin SE, validamos que él sea el creador de esta tabla
+            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+                if ($tabla['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
+                    respuestaError('Acceso denegado: Esta tabla pertenece a otro usuario.', 403);
+                }
+            }
+            // ------------------------------------
+            
             // Obtiene alumnos de la tabla
             $consulta = $conexion->prepare("
                 SELECT * FROM tabla_alumnos 
@@ -390,6 +399,14 @@ switch ($accion) {
             if (!$tabla) {
                 respuestaError('Tabla no encontrada');
             }
+            
+            
+            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+                if ($tabla['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
+                    respuestaError('Acceso denegado: No puedes ver resultados de una tabla de otro usuario.', 403);
+                }
+            }
+            // ------------------------------------
             
             // Obtiene configuración patronal
             $configPatronal = $conexion->query("SELECT * FROM configuracion_patronal WHERE activo = 1 LIMIT 1")->fetch();
@@ -461,8 +478,18 @@ switch ($accion) {
         }
         
         try {
-            $consulta = $conexion->prepare("UPDATE tablas_movimientos SET nombre = ? WHERE id_tabla = ? AND estado != 'enviado'");
-            $consulta->execute([$nombre, $idTabla]);
+            
+            $condicionDueno = "";
+            $parametros = [$nombre, $idTabla];
+            
+            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+                $condicionDueno = " AND id_usuario_creacion = ? ";
+                $parametros[] = obtenerIdUsuarioActual();
+            }
+            
+            $consulta = $conexion->prepare("UPDATE tablas_movimientos SET nombre = ? WHERE id_tabla = ? AND estado != 'enviado' $condicionDueno");
+            $consulta->execute($parametros);
+            // ------------------------------------
             
             if ($consulta->rowCount() == 0) {
                 respuestaError('No se pudo actualizar la tabla');
@@ -487,13 +514,21 @@ switch ($accion) {
         }
         
         // Verifica que la tabla no este enviada
-        $consulta = $conexion->prepare("SELECT nombre, estado FROM tablas_movimientos WHERE id_tabla = ?");
+        $consulta = $conexion->prepare("SELECT nombre, estado, id_usuario_creacion FROM tablas_movimientos WHERE id_tabla = ?");
         $consulta->execute([$idTabla]);
         $tabla = $consulta->fetch();
         
         if (!$tabla) {
             respuestaError('Tabla no encontrada');
         }
+        
+       
+        if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+            if ($tabla['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
+                respuestaError('Acceso denegado: No puedes eliminar una tabla de otro usuario.', 403);
+            }
+        }
+        // ------------------------------------
         
         if ($tabla['estado'] === 'enviado') {
             respuestaError('No se puede eliminar una tabla ya enviada');
@@ -513,9 +548,9 @@ switch ($accion) {
         }
         break;
     
-    // ========================================
+    
     // ALUMNOS
-    // ========================================
+
     
     // Agregar alumno a una tabla
     case 'agregar_alumno':
@@ -527,13 +562,21 @@ switch ($accion) {
         }
         
         // Verifica que la tabla exista y no este enviada
-        $consulta = $conexion->prepare("SELECT estado FROM tablas_movimientos WHERE id_tabla = ?");
+        $consulta = $conexion->prepare("SELECT estado, id_usuario_creacion FROM tablas_movimientos WHERE id_tabla = ?");
         $consulta->execute([$idTabla]);
         $tabla = $consulta->fetch();
         
         if (!$tabla) {
             respuestaError('Tabla no encontrada');
         }
+        
+        
+        if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+            if ($tabla['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
+                respuestaError('Acceso denegado: No puedes agregar alumnos a una tabla de otro usuario.', 403);
+            }
+        }
+       
         
         if ($tabla['estado'] === 'enviado') {
             respuestaError('No se puede agregar alumnos a una tabla ya enviada');
@@ -614,7 +657,7 @@ switch ($accion) {
         
         // Verifica que el alumno exista y la tabla no este enviada
         $consulta = $conexion->prepare("
-            SELECT a.id_tabla, t.estado 
+            SELECT a.id_tabla, t.estado, t.id_usuario_creacion 
             FROM tabla_alumnos a
             INNER JOIN tablas_movimientos t ON a.id_tabla = t.id_tabla
             WHERE a.id_registro = ?
@@ -625,6 +668,14 @@ switch ($accion) {
         if (!$registro) {
             respuestaError('Registro no encontrado');
         }
+        
+        
+        if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+            if ($registro['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
+                respuestaError('Acceso denegado: No puedes editar alumnos en una tabla de otro usuario.', 403);
+            }
+        }
+        
         
         if ($registro['estado'] === 'enviado') {
             respuestaError('No se puede editar alumnos de una tabla ya enviada');
@@ -699,7 +750,7 @@ switch ($accion) {
         
         // Verifica que el alumno exista y la tabla no este enviada
         $consulta = $conexion->prepare("
-            SELECT a.id_tabla, t.estado 
+            SELECT a.id_tabla, t.estado, t.id_usuario_creacion 
             FROM tabla_alumnos a
             INNER JOIN tablas_movimientos t ON a.id_tabla = t.id_tabla
             WHERE a.id_registro = ?
@@ -710,6 +761,14 @@ switch ($accion) {
         if (!$registro) {
             respuestaError('Registro no encontrado');
         }
+        
+      
+        if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+            if ($registro['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
+                respuestaError('Acceso denegado: No puedes eliminar alumnos en una tabla de otro usuario.', 403);
+            }
+        }
+        
         
         if ($registro['estado'] === 'enviado') {
             respuestaError('No se puede eliminar alumnos de una tabla ya enviada');

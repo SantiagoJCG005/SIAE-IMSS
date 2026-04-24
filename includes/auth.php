@@ -228,8 +228,10 @@ function obtenerPaginaInicio() {
             return URL_BASE . 'views/superadmin/dashboard.php';
 
         case ROL_JEFA_SERVICIOS:
-        case ROL_ADMIN_SERVICIOS:
             return URL_BASE . 'views/jefa/dashboard.php';
+
+        case ROL_ADMIN_SERVICIOS:
+            return URL_BASE . 'views/admin-se/dashboard.php';
 
         case ROL_ADMIN_IMSS:
             return URL_BASE . 'views/jefa/alumnos.php';

@@ -42,16 +42,28 @@ switch ($accion) {
     case 'listar':
         
         try {
+            $condicionAdicional = "";
+            $parametros = [];
+            
+            // Si es Admin SE y NO es Jefa ni Superadmin, solo ve lo suyo
+            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+                $condicionAdicional = " AND c.id_usuario_creacion = ? ";
+                $parametros[] = obtenerIdUsuarioActual();
+            }
+
             // Obtiene carpetas activas
             $sqlCarpetas = "
-                SELECT c.*, u.nombre_completo as creador,
+                SELECT c.*, u.nombre_completo as creador, r.nombre as creador_rol,
                        (SELECT COUNT(*) FROM subcarpetas_imss s WHERE s.id_carpeta = c.id_carpeta AND s.activo = 1) as total_subcarpetas
                 FROM carpetas_imss c
                 LEFT JOIN usuarios u ON c.id_usuario_creacion = u.id_usuario
-                WHERE c.activo = 1
+                LEFT JOIN roles r ON u.id_rol = r.id_rol
+                WHERE c.activo = 1 $condicionAdicional
                 ORDER BY c.fecha_creacion DESC
             ";
-            $carpetas = $conexion->query($sqlCarpetas)->fetchAll();
+            $consulta = $conexion->prepare($sqlCarpetas);
+            $consulta->execute($parametros);
+            $carpetas = $consulta->fetchAll();
             
             // Para cada carpeta, obtiene sus subcarpetas
             foreach ($carpetas as &$carpeta) {
@@ -334,9 +346,19 @@ switch ($accion) {
     case 'listar_simple':
         
         try {
-            $carpetas = $conexion->query("
-                SELECT id_carpeta, nombre FROM carpetas_imss WHERE activo = 1 ORDER BY nombre
-            ")->fetchAll();
+            $condicionAdicional = "";
+            $parametros = [];
+            
+            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+                $condicionAdicional = " AND id_usuario_creacion = ? ";
+                $parametros[] = obtenerIdUsuarioActual();
+            }
+
+            $consulta = $conexion->prepare("
+                SELECT id_carpeta, nombre FROM carpetas_imss WHERE activo = 1 $condicionAdicional ORDER BY nombre
+            ");
+            $consulta->execute($parametros);
+            $carpetas = $consulta->fetchAll();
             
             respuestaExitosa($carpetas);
             
