@@ -43,6 +43,7 @@ $tituloPagina = $tabla['nombre'];
 $esAlta = $tabla['tipo'] === 'alta';
 $esEnviado = $tabla['estado'] === 'enviado';
 $esBorrador = $tabla['estado'] === 'borrador';
+$esValidado = $tabla['estado'] === 'validado';
 
 $datosPatronales = [
     'registro_patronal' => $configPatronal['registro_patronal'] ?? '',
@@ -186,14 +187,21 @@ include __DIR__ . '/../layouts/sidebar-admin-se.php';
         <a href="<?= URL_BASE ?>views/admin-se/resultados.php?id=<?= $idTabla ?>" class="btn btn-outline">
             <i data-lucide="file-text"></i> Ver Resultados
         </a>
-        <?php if ($esEnviado): ?>
-        <a href="<?= URL_BASE ?>api/exportar-txt.php?action=generar&id_tabla=<?= $idTabla ?>" class="btn btn-outline">
-            <i data-lucide="download"></i> Descargar TXT
-        </a>
-        <?php endif; ?>
-        <button class="btn btn-primary" id="btnGenerarTxt" onclick="generarTxt()">
-            <i data-lucide="refresh-cw"></i> <?= $esEnviado ? 'Regenerar TXT' : 'Generar TXT' ?>
+        <?php if ($esBorrador): ?>
+        <button class="btn btn-outline" id="btnSolicitarRevision" onclick="solicitarRevision()">
+            <i data-lucide="send"></i> Solicitar revisión
         </button>
+        <?php endif; ?>
+        <?php if ($esValidado): ?>
+        <button class="btn btn-primary" id="btnGenerarTxt" onclick="generarTxt()">
+            <i data-lucide="file-output"></i> Generar TXT
+        </button>
+        <?php endif; ?>
+        <?php if ($esEnviado): ?>
+        <button class="btn btn-outline" id="btnDescargarTxt" onclick="descargarTxtEnviado()">
+            <i data-lucide="download"></i> Descargar TXT
+        </button>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -1041,6 +1049,66 @@ async function eliminar(id) {
         cargarAlumnos();
     } else {
         mostrarNotificacion(resp?.message || 'Error al eliminar', 'error');
+    }
+}
+
+async function solicitarRevision() {
+    if (alumnosData.length === 0) {
+        mostrarNotificacion('La tabla no tiene alumnos registrados', 'warning');
+        return;
+    }
+    const result = await Swal.fire({
+        title: '¿Solicitar revisión a la Jefa?',
+        html: `<p>Se notificará a la Jefa de Servicios que la tabla <strong>"${document.title}"</strong> está lista para revisión.</p>
+               <p style="color:var(--text-muted);margin-top:10px;font-size:13px;">Podrá aprobarla o rechazarla desde su panel de Validar.</p>`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, solicitar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#2563EB'
+    });
+    if (!result.isConfirmed) return;
+
+    const btn = document.getElementById('btnSolicitarRevision');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2"></i> Enviando...'; }
+
+    const resp = await llamarApi(API_URL, { method: 'POST', body: JSON.stringify({ action: 'solicitar_validacion', id_tabla: ID_TABLA }) });
+
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="send"></i> Solicitar revisión'; lucide.createIcons(); }
+
+    if (resp?.success) {
+        mostrarNotificacion(resp.message || 'Solicitud enviada a la Jefa de Servicios', 'success');
+    } else {
+        mostrarNotificacion(resp?.message || 'Error al enviar solicitud', 'error');
+    }
+}
+
+async function descargarTxtEnviado() {
+    const API_EXPORTAR = '<?= URL_BASE ?>api/exportar-txt.php';
+    Swal.fire({ title: 'Descargando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+    try {
+        const response = await fetch(`${API_EXPORTAR}?action=descargar&id_tabla=${ID_TABLA}`);
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            Swal.fire('Error', data.message || 'No se pudo descargar', 'error');
+            return;
+        }
+        const blob = await response.blob();
+        let filename = 'IMSS_export.txt';
+        const disposition = response.headers.get('content-disposition');
+        if (disposition && disposition.includes('filename=')) {
+            const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+            if (matches && matches[1]) filename = matches[1].replace(/['"]/g, '');
+        }
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        window.URL.revokeObjectURL(url); a.remove();
+        Swal.fire('Descargado', 'Archivo TXT descargado correctamente.', 'success');
+    } catch (e) {
+        Swal.fire('Error', 'Hubo un problema al descargar el archivo', 'error');
     }
 }
 

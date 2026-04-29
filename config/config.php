@@ -6,8 +6,9 @@
 // Define la zona horaria del sistema (hora de mexico)
 date_default_timezone_set('America/Mexico_City');
 
-// Define la ruta base del sistema (donde esta instalado)
-define('URL_BASE', '/ProgWeb/siae-imss/');
+// Ruta base del sistema
+// En Docker lee desde variable de entorno; en XAMPP usa /ProgWeb/siae-imss/ por defecto
+define('URL_BASE', getenv('URL_BASE') ?: '/ProgWeb/siae-imss/');
 
 // Define la ruta de archivos estaticos (css, js, imagenes)
 define('URL_RECURSOS', URL_BASE . 'assets/');

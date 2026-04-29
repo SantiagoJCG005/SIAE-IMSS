@@ -10,6 +10,13 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
 
 // Obtiene los datos del usuario que esta logueado
 $currentUser = obtenerUsuarioActual();
+// Obtiene las iniciales del nombre para mostrar en el avatar
+// Si no hay nombre, usa "SA" (Superadmin) como valor por defecto
+$userInitials = obtenerIniciales($currentUser['nombre_completo'] ?? 'SA');
+
+// Genera un color de fondo para el avatar basado en el nombre
+$avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin');
+
 ?>
 
 <aside class="sidebar">
@@ -94,13 +101,16 @@ $currentUser = obtenerUsuarioActual();
                 <div class="notif-dropdown" id="notifDropdown" style="display: none;">
                     <div class="notif-dropdown-header">
                         <span>Notificaciones</span>
-                        <button onclick="marcarTodasLeidas()" class="notif-mark-all">Marcar todas leídas</button>
+                        <div class="notif-header-actions">
+                            <button onclick="marcarTodasLeidas()" class="notif-header-btn" title="Marcar todas como leídas">Leídas</button>
+                            <button onclick="limpiarLeidas()" class="notif-header-btn" title="Eliminar leídas">Limpiar</button>
+                        </div>
                     </div>
                     <div class="notif-dropdown-body" id="notifLista">
                         <div class="notif-loading">Cargando...</div>
                     </div>
                     <div class="notif-dropdown-footer">
-                        <a href="<?= URL_BASE ?>views/jefa/notificaciones.php">Ver todas</a>
+                        <a href="<?= URL_BASE ?>views/jefa/notificaciones.php">Ver todas las notificaciones</a>
                     </div>
                 </div>
             </div>
@@ -124,158 +134,18 @@ $currentUser = obtenerUsuarioActual();
     
     <!-- Page Content -->
     <div class="page-content">
-
-<!-- Estilos para notificaciones -->
-<style>
-.notif-container { position: relative; }
-.notif-badge {
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    background: #EF4444;
-    color: white;
-    font-size: 11px;
-    font-weight: 600;
-    min-width: 18px;
-    height: 18px;
-    border-radius: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 4px;
-}
-.notif-dropdown {
-    position: absolute;
-    top: 100%;
-    right: 0;
-    margin-top: 8px;
-    width: 360px;
-    max-height: 480px;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-    z-index: 1000;
-    overflow: hidden;
-}
-.notif-dropdown-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px;
-    border-bottom: 1px solid #E2E8F0;
-    font-weight: 600;
-    color: #1E293B;
-}
-.notif-mark-all {
-    background: none;
-    border: none;
-    color: #2563EB;
-    font-size: 12px;
-    cursor: pointer;
-}
-.notif-mark-all:hover { text-decoration: underline; }
-.notif-dropdown-body {
-    max-height: 340px;
-    overflow-y: auto;
-}
-.notif-item {
-    display: flex;
-    gap: 12px;
-    padding: 14px 16px;
-    border-bottom: 1px solid #F1F5F9;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-.notif-item:hover { background: #F8FAFC; }
-.notif-item.no-leida { background: #EFF6FF; }
-.notif-item.no-leida:hover { background: #DBEAFE; }
-.notif-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 16px;
-    flex-shrink: 0;
-}
-.notif-icon.exportacion { background: #FEF3C7; }
-.notif-icon.alerta { background: #FEE2E2; }
-.notif-icon.info { background: #DBEAFE; }
-.notif-content { flex: 1; min-width: 0; }
-.notif-titulo {
-    font-size: 13px;
-    font-weight: 500;
-    color: #1E293B;
-    margin-bottom: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.notif-mensaje {
-    font-size: 12px;
-    color: #64748B;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-.notif-tiempo {
-    font-size: 11px;
-    color: #94A3B8;
-    margin-top: 4px;
-}
-.notif-dropdown-footer {
-    padding: 12px 16px;
-    text-align: center;
-    border-top: 1px solid #E2E8F0;
-}
-.notif-dropdown-footer a {
-    color: #2563EB;
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 500;
-}
-.notif-dropdown-footer a:hover { text-decoration: underline; }
-.notif-empty {
-    padding: 40px 20px;
-    text-align: center;
-    color: #94A3B8;
-}
-.notif-loading {
-    padding: 30px;
-    text-align: center;
-    color: #64748B;
-}
-.notif-acciones {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
-}
-.notif-btn {
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 11px;
-    border: none;
-    cursor: pointer;
-}
-.notif-btn-ok { background: #DCFCE7; color: #166534; }
-.notif-btn-problema { background: #FEE2E2; color: #991B1B; }
-</style>
+<link rel="stylesheet" href="<?= URL_RECURSOS ?>css/notifications.css">
 
 <!-- JavaScript para notificaciones -->
 <script>
 const API_NOTIF = '<?= URL_BASE ?>api/notificaciones.php';
 let notifDropdownAbierto = false;
 
-// Cargar contador de notificaciones al iniciar
 document.addEventListener('DOMContentLoaded', () => {
     cargarContadorNotificaciones();
-    // Actualizar cada 60 segundos
     setInterval(cargarContadorNotificaciones, 60000);
 });
 
-// Cerrar dropdown al hacer clic fuera
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.notif-container') && notifDropdownAbierto) {
         cerrarNotificaciones();
@@ -327,39 +197,52 @@ async function cargarNotificaciones() {
         
         if (data.success && data.data.length > 0) {
             lista.innerHTML = data.data.map(n => renderNotificacion(n)).join('');
+            lucide.createIcons();
         } else {
-            lista.innerHTML = '<div class="notif-empty">🔔 No hay notificaciones</div>';
+            lista.innerHTML = `
+                <div class="notif-empty">
+                    <i data-lucide="bell-off" style="width:32px;height:32px;display:block;margin:0 auto 8px;"></i>
+                    Sin notificaciones
+                </div>`;
+            lucide.createIcons();
         }
     } catch (e) {
-        lista.innerHTML = '<div class="notif-empty">Error al cargar</div>';
+        lista.innerHTML = '<div class="notif-empty">No se pudieron cargar</div>';
     }
 }
 
 function renderNotificacion(n) {
-    const icono = n.tipo === 'exportacion_txt' ? '📤' : (n.tipo === 'alerta_problema' ? '⚠️' : 'ℹ️');
-    const iconoClass = n.tipo === 'exportacion_txt' ? 'exportacion' : (n.tipo === 'alerta_problema' ? 'alerta' : 'info');
+    const tipoClase = n.tipo === 'exportacion_txt' ? 'tipo-exportacion' : (n.tipo === 'alerta_problema' ? 'tipo-alerta' : 'tipo-info');
+    const icono = n.tipo === 'exportacion_txt' ? 'file-output' : (n.tipo === 'alerta_problema' ? 'alert-triangle' : 'info');
     const noLeida = !n.leida ? 'no-leida' : '';
     const tiempo = tiempoRelativo(n.fecha_creacion);
     
     let acciones = '';
-    if (n.tipo === 'exportacion_txt' && n.estado === 'nueva') {
+    if (n.tipo === 'exportacion_txt' && (n.estado === 'nueva' || n.estado === 'vista')) {
         acciones = `
-            <div class="notif-acciones">
-                <button class="notif-btn notif-btn-ok" onclick="event.stopPropagation(); cambiarEstado(${n.id_notificacion}, 'revisada')">✓ OK</button>
-                <button class="notif-btn notif-btn-problema" onclick="event.stopPropagation(); cambiarEstado(${n.id_notificacion}, 'problema')">⚠️ Revisar</button>
+            <div class="notif-actions-inline">
+                <button class="notif-action-btn ok" onclick="event.stopPropagation(); cambiarEstado(${n.id_notificacion}, 'revisada')">Aprobar</button>
+                <button class="notif-action-btn problema" onclick="event.stopPropagation(); cambiarEstado(${n.id_notificacion}, 'problema')">Revisar</button>
             </div>
         `;
     }
     
     return `
         <div class="notif-item ${noLeida}" onclick="verNotificacion(${n.id_notificacion})">
-            <div class="notif-icon ${iconoClass}">${icono}</div>
+            <div class="notif-indicator ${tipoClase}">
+                <i data-lucide="${icono}" style="width:16px;height:16px;"></i>
+            </div>
             <div class="notif-content">
                 <div class="notif-titulo">${escapeHtml(n.titulo)}</div>
-                <div class="notif-mensaje">${n.nombre_origen ? 'Por: ' + escapeHtml(n.nombre_origen) : ''}</div>
-                <div class="notif-tiempo">${tiempo}</div>
+                <div class="notif-meta">
+                    ${n.nombre_origen ? '<span>' + escapeHtml(n.nombre_origen) + '</span><span class="notif-meta-dot"></span>' : ''}
+                    <span>${tiempo}</span>
+                </div>
                 ${acciones}
             </div>
+            <button class="notif-delete-btn" onclick="event.stopPropagation(); eliminarNotif(${n.id_notificacion})" title="Eliminar">
+                <i data-lucide="x" style="width:14px;height:14px;"></i>
+            </button>
         </div>
     `;
 }
@@ -376,13 +259,52 @@ async function marcarTodasLeidas() {
     cargarNotificaciones();
 }
 
+async function eliminarNotif(id) {
+    await fetch(API_NOTIF + '?action=eliminar&id=' + id);
+    cargarContadorNotificaciones();
+    cargarNotificaciones();
+}
+
+async function limpiarLeidas() {
+    const confirmado = await Swal.fire({
+        title: 'Limpiar leídas',
+        text: 'Se eliminarán las notificaciones ya leídas.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: 'var(--secondary)',
+        cancelButtonColor: 'var(--text-muted)',
+        confirmButtonText: 'Sí, limpiar',
+        cancelButtonText: 'Cancelar'
+    });
+    if (!confirmado.isConfirmed) return;
+    
+    await fetch(API_NOTIF + '?action=eliminar_leidas');
+    cargarContadorNotificaciones();
+    cargarNotificaciones();
+    mostrarNotificacion('Notificaciones leídas eliminadas', 'success');
+}
+
 async function cambiarEstado(id, estado) {
+    if (estado === 'problema') {
+        const confirmado = await Swal.fire({
+            title: '¿Reportar problema?',
+            text: 'Se notificará al usuario que realizó la exportación.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: 'var(--danger)',
+            cancelButtonColor: 'var(--text-muted)',
+            confirmButtonText: 'Sí, reportar',
+            cancelButtonText: 'Cancelar'
+        });
+        if (!confirmado.isConfirmed) return;
+    }
+    
     await fetch(API_NOTIF + '?action=cambiar_estado&id=' + id + '&estado=' + estado);
     cargarContadorNotificaciones();
     cargarNotificaciones();
     
     if (estado === 'problema') {
-        mostrarNotificacion('Se ha notificado al usuario que debe revisar esta exportación', 'warning');
+        mostrarNotificacion('Problema reportado al usuario', 'warning');
     } else {
         mostrarNotificacion('Marcada como revisada', 'success');
     }
@@ -393,11 +315,11 @@ function tiempoRelativo(fecha) {
     const notif = new Date(fecha);
     const diff = Math.floor((ahora - notif) / 1000);
     
-    if (diff < 60) return 'Hace un momento';
-    if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
-    if (diff < 86400) return `Hace ${Math.floor(diff / 3600)} hrs`;
-    if (diff < 604800) return `Hace ${Math.floor(diff / 86400)} días`;
-    return notif.toLocaleDateString('es-MX');
+    if (diff < 60) return 'Ahora';
+    if (diff < 3600) return Math.floor(diff / 60) + ' min';
+    if (diff < 86400) return Math.floor(diff / 3600) + ' h';
+    if (diff < 604800) return Math.floor(diff / 86400) + ' d';
+    return notif.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
 }
 
 function escapeHtml(text) {

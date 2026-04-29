@@ -4,17 +4,20 @@
  * Conexion PDO a MySQL
  */
 
-// Define el servidor de base de datos (normalmente localhost)
-define('DB_HOST', 'localhost');
+// Servidor de base de datos
+// En Docker usa el nombre del servicio "db"; en XAMPP usa "localhost" por defecto
+define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
 
 // Nombre de la base de datos
-define('DB_NAME', 'siae_imss');
+// Lee desde variable de entorno Docker; si no existe usa el valor por defecto
+define('DB_NAME', getenv('DB_NAME') ?: 'siae_imss');
 
 // Usuario de la base de datos
-define('DB_USER', 'root');
+define('DB_USER', getenv('DB_USER') ?: 'root');
 
-// Contraseña de la base de datos
-define('DB_PASS', 'Denji_2005');
+// Contrasena de la base de datos
+// En Docker viene del archivo .env; en XAMPP usa el valor hardcodeado
+define('DB_PASS', getenv('DB_PASS') ?: 'Denji_2005');
 
 // Tipo de codificacion de caracteres
 define('DB_CHARSET', 'utf8mb4');

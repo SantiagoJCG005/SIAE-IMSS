@@ -17,8 +17,8 @@ if (!estaLogueado()) {
 }
 
 $conexion = obtenerConexion();
-$accion = obtenerParametro('action', '');
-$idUsuario = $_SESSION['usuario']['id_usuario'];
+$accion = $_GET['action'] ?? '';
+$idUsuario = obtenerIdUsuarioActual();
 
 switch ($accion) {
     
@@ -27,8 +27,8 @@ switch ($accion) {
      */
     case 'listar':
         try {
-            $soloNoLeidas = obtenerParametro('no_leidas', '0') === '1';
-            $limite = intval(obtenerParametro('limite', 20));
+            $soloNoLeidas = ($_GET['no_leidas'] ?? '0') === '1';
+            $limite = intval($_GET['limite'] ?? 20);
             
             $sql = "
                 SELECT 
@@ -82,7 +82,7 @@ switch ($accion) {
      */
     case 'marcar_leida':
         try {
-            $idNotificacion = intval(obtenerParametro('id', 0));
+            $idNotificacion = intval($_GET['id'] ?? 0);
             
             if ($idNotificacion <= 0) {
                 respuestaError('ID de notificación no válido');
@@ -134,8 +134,8 @@ switch ($accion) {
      */
     case 'cambiar_estado':
         try {
-            $idNotificacion = intval(obtenerParametro('id', 0));
-            $nuevoEstado = obtenerParametro('estado', '');
+            $idNotificacion = intval($_GET['id'] ?? 0);
+            $nuevoEstado = $_GET['estado'] ?? '';
             
             $estadosValidos = ['vista', 'revisada', 'problema'];
             
@@ -175,7 +175,7 @@ switch ($accion) {
      */
     case 'detalle':
         try {
-            $idNotificacion = intval(obtenerParametro('id', 0));
+            $idNotificacion = intval($_GET['id'] ?? 0);
             
             if ($idNotificacion <= 0) {
                 respuestaError('ID de notificación no válido');
@@ -209,6 +209,55 @@ switch ($accion) {
             
         } catch (Exception $e) {
             respuestaError('Error al obtener detalle');
+        }
+        break;
+    
+    /**
+     * Eliminar una notificación
+     */
+    case 'eliminar':
+        try {
+            $idNotificacion = intval($_GET['id'] ?? 0);
+            
+            if ($idNotificacion <= 0) {
+                respuestaError('ID de notificación no válido');
+            }
+            
+            $consulta = $conexion->prepare("
+                DELETE FROM notificaciones 
+                WHERE id_notificacion = ? AND id_usuario_destino = ?
+            ");
+            $consulta->execute([$idNotificacion, $idUsuario]);
+            
+            if ($consulta->rowCount() > 0) {
+                respuestaExitosa(['mensaje' => 'Notificación eliminada']);
+            } else {
+                respuestaError('Notificación no encontrada');
+            }
+            
+        } catch (Exception $e) {
+            respuestaError('Error al eliminar notificación');
+        }
+        break;
+    
+    /**
+     * Eliminar todas las notificaciones leídas
+     */
+    case 'eliminar_leidas':
+        try {
+            $consulta = $conexion->prepare("
+                DELETE FROM notificaciones 
+                WHERE id_usuario_destino = ? AND leida = 1
+            ");
+            $consulta->execute([$idUsuario]);
+            
+            respuestaExitosa([
+                'mensaje' => 'Notificaciones leídas eliminadas',
+                'eliminadas' => $consulta->rowCount()
+            ]);
+            
+        } catch (Exception $e) {
+            respuestaError('Error al eliminar notificaciones');
         }
         break;
     

@@ -53,8 +53,8 @@ try {
         FROM tablas_movimientos 
         WHERE tipo = 'alta' 
           AND estado = 'enviado'
-          AND MONTH(fecha_envio) = MONTH(CURRENT_DATE())
-          AND YEAR(fecha_envio) = YEAR(CURRENT_DATE())
+          AND MONTH(fecha_exportacion) = MONTH(CURRENT_DATE())
+          AND YEAR(fecha_exportacion) = YEAR(CURRENT_DATE())
     ");
     $estadisticas['altas_mes'] = $consulta->fetch()['total'];
     
@@ -64,8 +64,8 @@ try {
         FROM tablas_movimientos 
         WHERE tipo = 'baja' 
           AND estado = 'enviado'
-          AND MONTH(fecha_envio) = MONTH(CURRENT_DATE())
-          AND YEAR(fecha_envio) = YEAR(CURRENT_DATE())
+          AND MONTH(fecha_exportacion) = MONTH(CURRENT_DATE())
+          AND YEAR(fecha_exportacion) = YEAR(CURRENT_DATE())
     ");
     $estadisticas['bajas_mes'] = $consulta->fetch()['total'];
     

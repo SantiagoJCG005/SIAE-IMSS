@@ -71,37 +71,57 @@ switch ($accion) {
         
         try {
             // Verifica que la tabla exista y este en borrador
-            $consulta = $conexion->prepare("SELECT estado, nombre FROM tablas_movimientos WHERE id_tabla = ?");
+            $consulta = $conexion->prepare("SELECT estado, nombre, id_usuario_creacion FROM tablas_movimientos WHERE id_tabla = ?");
             $consulta->execute([$idTabla]);
             $tabla = $consulta->fetch();
-            
+
             if (!$tabla) {
                 respuestaError('Tabla no encontrada');
             }
-            
+
             if ($tabla['estado'] !== 'borrador') {
                 respuestaError('Solo se pueden aprobar tablas en borrador');
             }
-            
+
             // Verifica que no tenga errores
             $consulta = $conexion->prepare("SELECT COUNT(*) as total FROM tabla_alumnos WHERE id_tabla = ? AND tiene_errores = 1");
             $consulta->execute([$idTabla]);
             $errores = $consulta->fetch()['total'];
-            
+
             if ($errores > 0) {
                 respuestaError("No se puede aprobar: hay $errores registro(s) con errores");
             }
-            
+
+            $idJefa = obtenerIdUsuarioActual();
+
             // Actualiza estado
             $consulta = $conexion->prepare("
-                UPDATE tablas_movimientos 
+                UPDATE tablas_movimientos
                 SET estado = 'validado', id_usuario_validacion = ?, fecha_validacion = NOW()
                 WHERE id_tabla = ?
             ");
-            $consulta->execute([obtenerIdUsuarioActual(), $idTabla]);
-            
+            $consulta->execute([$idJefa, $idTabla]);
+
             registrarEnBitacora('VALIDAR_TABLA', "Tabla aprobada: {$tabla['nombre']} (ID: $idTabla)");
-            
+
+            // Notificar al Admin SE creador de la tabla
+            if ($tabla['id_usuario_creacion']) {
+                $usuarioJefa = obtenerUsuarioActual();
+                $nombreJefa = $usuarioJefa['nombre_completo'] ?? 'La Jefa de Servicios';
+                $notif = $conexion->prepare("
+                    INSERT INTO notificaciones
+                    (id_usuario_destino, id_usuario_origen, tipo, titulo, mensaje, referencia_tipo, referencia_id)
+                    VALUES (?, ?, 'validacion_aprobada', ?, ?, 'tablas_movimientos', ?)
+                ");
+                $notif->execute([
+                    $tabla['id_usuario_creacion'],
+                    $idJefa,
+                    '✅ Tabla aprobada: ' . $tabla['nombre'],
+                    $nombreJefa . ' ha aprobado la tabla "' . $tabla['nombre'] . '". Los datos fueron validados correctamente.',
+                    $idTabla
+                ]);
+            }
+
             respuestaExitosa(null, 'Tabla aprobada correctamente');
             
         } catch (Exception $e) {
@@ -133,15 +153,36 @@ switch ($accion) {
                 respuestaError('Solo se pueden rechazar tablas en borrador');
             }
             
-            // Elimina la tabla (o podriamos marcarla como rechazada)
-            // Por ahora la eliminamos
+            $idJefa = obtenerIdUsuarioActual();
+
+            // Elimina la tabla
             $consulta = $conexion->prepare("DELETE FROM tablas_movimientos WHERE id_tabla = ?");
             $consulta->execute([$idTabla]);
-            
+
             registrarEnBitacora('RECHAZAR_TABLA', "Tabla rechazada: {$tabla['nombre']} (ID: $idTabla)" . ($motivo ? " - Motivo: $motivo" : ''));
-            
-            // TODO: Notificar al usuario creador
-            
+
+            // Notificar al Admin SE creador de la tabla
+            if ($tabla['id_usuario_creacion']) {
+                $usuarioJefa = obtenerUsuarioActual();
+                $nombreJefa = $usuarioJefa['nombre_completo'] ?? 'La Jefa de Servicios';
+                $mensajeRechazo = $nombreJefa . ' ha rechazado la tabla "' . $tabla['nombre'] . '".';
+                if ($motivo) {
+                    $mensajeRechazo .= "\n\nMotivo: " . $motivo;
+                }
+                $notif = $conexion->prepare("
+                    INSERT INTO notificaciones
+                    (id_usuario_destino, id_usuario_origen, tipo, titulo, mensaje, referencia_tipo, referencia_id)
+                    VALUES (?, ?, 'validacion_rechazada', ?, ?, 'tablas_movimientos', ?)
+                ");
+                $notif->execute([
+                    $tabla['id_usuario_creacion'],
+                    $idJefa,
+                    '❌ Tabla rechazada: ' . $tabla['nombre'],
+                    $mensajeRechazo,
+                    $idTabla
+                ]);
+            }
+
             respuestaExitosa(null, 'Tabla rechazada y eliminada');
             
         } catch (Exception $e) {
@@ -179,8 +220,8 @@ switch ($accion) {
                 SELECT COUNT(*) as total 
                 FROM tablas_movimientos 
                 WHERE estado = 'enviado' 
-                  AND MONTH(fecha_envio) = MONTH(CURRENT_DATE())
-                  AND YEAR(fecha_envio) = YEAR(CURRENT_DATE())
+                  AND MONTH(fecha_exportacion) = MONTH(CURRENT_DATE())
+                  AND YEAR(fecha_exportacion) = YEAR(CURRENT_DATE())
             ");
             $stats['enviadas_mes'] = $consulta->fetch()['total'];
             

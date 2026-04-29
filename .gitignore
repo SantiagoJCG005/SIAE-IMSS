@@ -1,0 +1,20 @@
+# .gitignore
+# Archivos y carpetas que NO se suben al repositorio
+
+# Variables de entorno con contrasenas reales
+.env
+
+# Archivos subidos por usuarios (Excel, etc.)
+uploads/*
+!uploads/.gitkeep
+
+# Archivos exportados (TXT para el IMSS)
+exports/*
+!exports/.gitkeep
+
+# Configuracion local de Claude Code
+.claude/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db

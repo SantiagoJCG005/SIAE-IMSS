@@ -18,8 +18,8 @@ if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
-// Solo Jefa de Servicios y Admin Servicios pueden usar esta API
-if (!tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+// Solo Jefa de Servicios, Admin Servicios y Admin IMSS pueden usar esta API
+if (!tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_SUPERADMIN) && !tieneRol(ROL_ADMIN_IMSS)) {
     respuestaError('Sin permisos para esta accion', 403);
 }
 
@@ -791,6 +791,90 @@ switch ($accion) {
         }
         break;
     
+    // Solicitar revision/validacion a la Jefa de Servicios
+    case 'solicitar_validacion':
+
+        $idTabla = intval($datosEntrada['id_tabla'] ?? 0);
+
+        if ($idTabla <= 0) {
+            respuestaError('ID de tabla no válido');
+        }
+
+        try {
+            $consulta = $conexion->prepare("SELECT nombre, estado, id_usuario_creacion, tipo FROM tablas_movimientos WHERE id_tabla = ?");
+            $consulta->execute([$idTabla]);
+            $tabla = $consulta->fetch();
+
+            if (!$tabla) {
+                respuestaError('Tabla no encontrada');
+            }
+
+            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+                if ($tabla['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
+                    respuestaError('Acceso denegado', 403);
+                }
+            }
+
+            if ($tabla['estado'] === 'enviado') {
+                respuestaError('Esta tabla ya fue enviada al IMSS');
+            }
+
+            // Verifica que no tenga errores
+            $consulta = $conexion->prepare("SELECT COUNT(*) as total FROM tabla_alumnos WHERE id_tabla = ? AND tiene_errores = 1");
+            $consulta->execute([$idTabla]);
+            $errores = $consulta->fetch()['total'];
+
+            if ($errores > 0) {
+                respuestaError("No se puede solicitar revisión: hay $errores registro(s) con errores. Corrígelos primero.");
+            }
+
+            // Verifica que tenga alumnos
+            $consulta = $conexion->prepare("SELECT COUNT(*) as total FROM tabla_alumnos WHERE id_tabla = ?");
+            $consulta->execute([$idTabla]);
+            $totalAlumnos = $consulta->fetch()['total'];
+
+            if ($totalAlumnos == 0) {
+                respuestaError('La tabla no tiene alumnos registrados');
+            }
+
+            $idAdmin = obtenerIdUsuarioActual();
+            $usuarioAdmin = obtenerUsuarioActual();
+            $nombreAdmin = $usuarioAdmin['nombre_completo'] ?? 'Admin SE';
+            $tipoMov = $tabla['tipo'] === 'alta' ? 'Alta' : 'Baja';
+
+            // Notificar a todas las Jefas activas
+            $consulta = $conexion->prepare("SELECT id_usuario FROM usuarios WHERE id_rol = ? AND activo = 1");
+            $consulta->execute([ROL_JEFA_SERVICIOS]);
+            $jefas = $consulta->fetchAll();
+
+            if (empty($jefas)) {
+                respuestaError('No hay Jefa de Servicios activa para notificar');
+            }
+
+            foreach ($jefas as $jefa) {
+                $notif = $conexion->prepare("
+                    INSERT INTO notificaciones
+                    (id_usuario_destino, id_usuario_origen, tipo, titulo, mensaje, referencia_tipo, referencia_id)
+                    VALUES (?, ?, 'solicitud_validacion', ?, ?, 'tablas_movimientos', ?)
+                ");
+                $notif->execute([
+                    $jefa['id_usuario'],
+                    $idAdmin,
+                    '📋 Solicitud de validación: ' . $tabla['nombre'],
+                    $nombreAdmin . ' solicita tu revisión de la tabla "' . $tabla['nombre'] . '" (' . $tipoMov . ', ' . $totalAlumnos . ' alumnos). Entra a Validar para aprobarla o rechazarla.',
+                    $idTabla
+                ]);
+            }
+
+            registrarEnBitacora('SOLICITAR_VALIDACION', "Validación solicitada: {$tabla['nombre']} (ID: $idTabla)");
+
+            respuestaExitosa(null, 'Solicitud enviada a la Jefa de Servicios');
+
+        } catch (Exception $e) {
+            respuestaError('Error al solicitar validación: ' . $e->getMessage());
+        }
+        break;
+
     // Listar tablas pendientes de validacion (para Admin SE)
     case 'listar_pendientes':
         

@@ -234,7 +234,7 @@ function obtenerPaginaInicio() {
             return URL_BASE . 'views/admin-se/dashboard.php';
 
         case ROL_ADMIN_IMSS:
-            return URL_BASE . 'views/jefa/alumnos.php';
+            return URL_BASE . 'views/admin-imss/dashboard.php';
 
         case ROL_ESTUDIANTE:
             return URL_BASE . 'views/estudiante/dashboard.php';

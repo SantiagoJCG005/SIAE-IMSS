@@ -21,8 +21,8 @@ if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
-// Roles permitidos: Superadmin, Jefa de Servicios, Admin Servicios
-$rolesPermitidos = [ROL_SUPERADMIN, ROL_JEFA_SERVICIOS, ROL_ADMIN_SERVICIOS];
+// Roles permitidos: Superadmin, Jefa de Servicios, Admin Servicios, Admin IMSS
+$rolesPermitidos = [ROL_SUPERADMIN, ROL_JEFA_SERVICIOS, ROL_ADMIN_SERVICIOS, ROL_ADMIN_IMSS];
 if (!tieneAlgunRol($rolesPermitidos)) {
     header('Content-Type: application/json');
     respuestaError('Sin permisos para exportar', 403);
@@ -219,7 +219,13 @@ switch ($accion) {
                 header('Content-Type: application/json');
                 respuestaError('Tabla no encontrada');
             }
-            
+
+            // Solo tablas validadas o ya enviadas pueden exportarse
+            if (!in_array($tabla['estado'], ['validado', 'enviado'])) {
+                header('Content-Type: application/json');
+                respuestaError('La tabla debe ser aprobada por la Jefa de Servicios antes de exportar');
+            }
+
             // Verificar que no hay errores
             $consulta = $conexion->prepare("SELECT COUNT(*) as total FROM tabla_alumnos WHERE id_tabla = ? AND tiene_errores = 1");
             $consulta->execute([$idTabla]);
@@ -279,7 +285,7 @@ switch ($accion) {
             // Actualizar estado de la tabla
             $consulta = $conexion->prepare("
                 UPDATE tablas_movimientos 
-                SET estado = 'enviado', fecha_envio = NOW(), archivo_txt_generado = ?
+                SET estado = 'enviado', fecha_exportacion = NOW(), archivo_txt_generado = ?
                 WHERE id_tabla = ?
             ");
             $consulta->execute([$nombreArchivo, $idTabla]);
@@ -360,6 +366,86 @@ switch ($accion) {
         }
         break;
     
+    // Descarga de solo lectura para Admin IMSS (no cambia estado ni notifica)
+    case 'descargar':
+
+        $idTabla = intval(obtenerGet('id_tabla', 0));
+
+        if ($idTabla <= 0) {
+            header('Content-Type: application/json');
+            respuestaError('ID de tabla no valido');
+        }
+
+        try {
+            $consulta = $conexion->prepare("
+                SELECT t.*, s.nombre as subcarpeta_nombre, c.nombre as carpeta_nombre
+                FROM tablas_movimientos t
+                INNER JOIN subcarpetas_imss s ON t.id_subcarpeta = s.id_subcarpeta
+                INNER JOIN carpetas_imss c ON s.id_carpeta = c.id_carpeta
+                WHERE t.id_tabla = ?
+            ");
+            $consulta->execute([$idTabla]);
+            $tabla = $consulta->fetch();
+
+            if (!$tabla) {
+                header('Content-Type: application/json');
+                respuestaError('Tabla no encontrada');
+            }
+
+            if ($tabla['estado'] !== 'enviado') {
+                header('Content-Type: application/json');
+                respuestaError('Solo se pueden descargar tablas ya enviadas');
+            }
+
+            $consulta = $conexion->prepare("SELECT * FROM tabla_alumnos WHERE id_tabla = ? ORDER BY numero_cuenta");
+            $consulta->execute([$idTabla]);
+            $alumnos = $consulta->fetchAll();
+
+            if (empty($alumnos)) {
+                header('Content-Type: application/json');
+                respuestaError('La tabla no tiene alumnos');
+            }
+
+            $configPatronal = $conexion->query("SELECT * FROM configuracion_patronal WHERE activo = 1 LIMIT 1")->fetch();
+
+            if (!$configPatronal) {
+                header('Content-Type: application/json');
+                respuestaError('No hay configuracion patronal activa');
+            }
+
+            $esAlta = $tabla['tipo'] === 'alta';
+            $fechaMovFmt = date('dmY', strtotime($tabla['fecha_movimiento']));
+            $lineas = [];
+
+            foreach ($alumnos as $alumno) {
+                $lineas[] = $esAlta
+                    ? generarLineaAlta($alumno, $configPatronal, $fechaMovFmt)
+                    : generarLineaBaja($alumno, $configPatronal, $fechaMovFmt);
+            }
+
+            $codigoInstitucion = $configPatronal['codigo_institucion'] ?? '01402';
+            $lineas[] = generarLineaTotales(count($alumnos), $codigoInstitucion);
+
+            $nombreArchivo = $tabla['archivo_txt_generado'] ?? ('IMSS_' . date('dmY', strtotime($tabla['fecha_movimiento'])) . '_' . strtoupper($tabla['tipo']) . '.txt');
+
+            registrarEnBitacora('DESCARGAR_TXT_IMSS', "TXT descargado (lectura): $nombreArchivo (Tabla ID: $idTabla)");
+
+            $contenido = implode("\r\n", $lineas);
+
+            header('Content-Type: text/plain; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . $nombreArchivo . '"');
+            header('Content-Length: ' . strlen($contenido));
+            header('Cache-Control: no-cache, must-revalidate');
+
+            echo $contenido;
+            exit;
+
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            respuestaError('Error al generar descarga: ' . $e->getMessage());
+        }
+        break;
+
     default:
         header('Content-Type: application/json');
         respuestaError('Accion no valida', 400);
@@ -371,7 +457,7 @@ switch ($accion) {
  */
 function notificarExportacionAJefa($conexion, $idTabla, $tabla, $nombreArchivo, $totalRegistros) {
     try {
-        $usuarioActual = $_SESSION['usuario'];
+        $usuarioActual = $_SESSION['user'];
         
         // Buscar usuarios con rol Jefa de Servicios
         $consulta = $conexion->prepare("

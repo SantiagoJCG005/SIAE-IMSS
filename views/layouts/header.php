@@ -31,6 +31,7 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'User');
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <link rel="stylesheet" href="styles.css">
     <?php // Muestra el titulo de la pagina actual o 'SIAE-IMSS' si no esta definido, seguido del nombre del sistema ?>
     <title><?= $tituloPagina ?? 'SIAE-IMSS' ?> - <?= NOMBRE_SISTEMA ?></title>
     

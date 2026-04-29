@@ -1,0 +1,45 @@
+# docker-compose.yml
+# Orquesta los contenedores del sistema SIAE-IMSS:
+#   - app: PHP 8.2 + Apache (sirve la aplicacion)
+#   - db:  MySQL 8.0 (base de datos)
+
+services:
+
+  # --- Contenedor de la aplicacion PHP + Apache ---
+  app:
+    build: .                        # usa el Dockerfile de la raiz del proyecto
+    ports:
+      - "80:80"                     # expone el puerto 80 del contenedor al host
+    volumes:
+      - .:/var/www/html             # monta el codigo fuente dentro del contenedor
+      - uploads_data:/var/www/html/uploads   # volumen persistente para archivos subidos
+      - exports_data:/var/www/html/exports   # volumen persistente para archivos exportados
+    env_file: .env                  # carga las variables de entorno desde .env
+    depends_on:
+      db:
+        condition: service_healthy  # espera a que MySQL este listo antes de iniciar
+
+  # --- Contenedor de MySQL ---
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password  # compatibilidad con PDO de PHP
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASS}   # contrasena del usuario root
+      MYSQL_DATABASE: ${DB_NAME}        # crea la base de datos automaticamente
+    ports:
+      - "3306:3306"                 # expone MySQL para acceso externo (ej. TablePlus, DBeaver)
+    volumes:
+      - db_data:/var/lib/mysql                              # datos de MySQL persistentes
+      - ./siae_imss_database.sql:/docker-entrypoint-initdb.d/init.sql  # importa el SQL al crear el contenedor
+    healthcheck:                    # verifica que MySQL este listo para aceptar conexiones
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASS}"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+# --- Volumenes nombrados ---
+# Persisten los datos aunque se reinicie el contenedor
+volumes:
+  db_data:        # datos de la base de datos
+  uploads_data:   # archivos subidos por usuarios
+  exports_data:   # archivos TXT exportados para el IMSS

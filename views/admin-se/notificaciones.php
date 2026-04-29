@@ -1,6 +1,6 @@
 <?php
 /**
- * SIAE-IMSS - Notificaciones (Jefa de Servicios)
+ * SIAE-IMSS - Notificaciones (Admin Servicios Escolares)
  * Vista completa del historial de notificaciones
  */
 
@@ -13,7 +13,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/functions.php';
 
 requerirLogin();
-requerirRol(ROL_JEFA_SERVICIOS);
+requerirRol(ROL_ADMIN_SERVICIOS);
 
 $conexion = obtenerConexion();
 $idUsuario = obtenerIdUsuarioActual();
@@ -69,7 +69,7 @@ try {
 }
 
 include __DIR__ . '/../layouts/header.php';
-include __DIR__ . '/../layouts/sidebar-jefa.php';
+include __DIR__ . '/../layouts/sidebar-admin-se.php';
 ?>
 
 <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -95,27 +95,27 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
 
 <!-- Filtros -->
 <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
-    <a href="<?= URL_BASE ?>views/jefa/notificaciones.php" 
+    <a href="<?= URL_BASE ?>views/admin-se/notificaciones.php" 
        class="nf-filtro-chip <?= !$filtroEstado && !$filtroTipo ? 'activo' : '' ?>">
         Todas
     </a>
-    <a href="<?= URL_BASE ?>views/jefa/notificaciones.php?estado=no_leidas" 
+    <a href="<?= URL_BASE ?>views/admin-se/notificaciones.php?estado=no_leidas" 
        class="nf-filtro-chip <?= $filtroEstado === 'no_leidas' ? 'activo' : '' ?>">
         Sin leer
     </a>
-    <a href="<?= URL_BASE ?>views/jefa/notificaciones.php?tipo=exportacion_txt" 
-       class="nf-filtro-chip <?= $filtroTipo === 'exportacion_txt' ? 'activo' : '' ?>">
-        Exportaciones
-    </a>
-    <a href="<?= URL_BASE ?>views/jefa/notificaciones.php?tipo=solicitud_validacion"
-       class="nf-filtro-chip <?= $filtroTipo === 'solicitud_validacion' ? 'activo' : '' ?>">
-        Solicitudes
-    </a>
-    <a href="<?= URL_BASE ?>views/jefa/notificaciones.php?tipo=alerta_problema"
+    <a href="<?= URL_BASE ?>views/admin-se/notificaciones.php?tipo=alerta_problema"
        class="nf-filtro-chip <?= $filtroTipo === 'alerta_problema' ? 'activo' : '' ?>">
         Alertas
     </a>
-    <a href="<?= URL_BASE ?>views/jefa/notificaciones.php?estado=leidas" 
+    <a href="<?= URL_BASE ?>views/admin-se/notificaciones.php?tipo=validacion_aprobada"
+       class="nf-filtro-chip <?= $filtroTipo === 'validacion_aprobada' ? 'activo' : '' ?>">
+        Aprobadas
+    </a>
+    <a href="<?= URL_BASE ?>views/admin-se/notificaciones.php?tipo=validacion_rechazada"
+       class="nf-filtro-chip <?= $filtroTipo === 'validacion_rechazada' ? 'activo' : '' ?>">
+        Rechazadas
+    </a>
+    <a href="<?= URL_BASE ?>views/admin-se/notificaciones.php?estado=leidas" 
        class="nf-filtro-chip <?= $filtroEstado === 'leidas' ? 'activo' : '' ?>">
         Leidas
     </a>
@@ -136,12 +136,15 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
                 if ($notif['tipo'] === 'exportacion_txt') {
                     $tipoClase = 'tipo-exportacion';
                     $tipoIcono = 'file-output';
-                } elseif ($notif['tipo'] === 'solicitud_validacion') {
-                    $tipoClase = 'tipo-solicitud';
-                    $tipoIcono = 'clipboard-check';
                 } elseif ($notif['tipo'] === 'alerta_problema') {
                     $tipoClase = 'tipo-alerta';
                     $tipoIcono = 'alert-triangle';
+                } elseif ($notif['tipo'] === 'validacion_aprobada') {
+                    $tipoClase = 'tipo-aprobado';
+                    $tipoIcono = 'check-circle';
+                } elseif ($notif['tipo'] === 'validacion_rechazada') {
+                    $tipoClase = 'tipo-rechazado';
+                    $tipoIcono = 'x-circle';
                 }
             ?>
             <div class="nf-row <?= $noLeida ? 'no-leida' : '' ?>" id="nf-<?= $notif['id_notificacion'] ?>">
@@ -165,7 +168,7 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
                     <?php if ($notif['mensaje']): ?>
                     <div class="nf-mensaje"><?= nl2br(htmlspecialchars($notif['mensaje'])) ?></div>
                     <?php endif; ?>
-
+                    
                     <?php if (!empty($datosExtra)): ?>
                     <div class="nf-extras">
                         <?php if (isset($datosExtra['archivo'])): ?>
@@ -189,33 +192,14 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
                     <?php endif; ?>
                     
                     <div class="nf-barra-acciones">
-                        <?php if ($notif['tipo'] === 'exportacion_txt'): ?>
-                            <?php if ($notif['estado'] === 'nueva' || $notif['estado'] === 'vista'): ?>
-                            <button onclick="cambiarEstadoNotif(<?= $notif['id_notificacion'] ?>, 'revisada')" class="nf-btn-accion aprobado">
-                                <i data-lucide="check" style="width:13px;height:13px;"></i> Aprobar
-                            </button>
-                            <button onclick="cambiarEstadoNotif(<?= $notif['id_notificacion'] ?>, 'problema')" class="nf-btn-accion rechazado">
-                                <i data-lucide="flag" style="width:13px;height:13px;"></i> Reportar
-                            </button>
-                            <?php elseif ($notif['estado'] === 'revisada'): ?>
-                            <span class="nf-estado-label aprobado">
-                                <i data-lucide="check-circle" style="width:13px;height:13px;"></i> Revisada
-                            </span>
-                            <?php elseif ($notif['estado'] === 'problema'): ?>
-                            <span class="nf-estado-label rechazado">
-                                <i data-lucide="alert-circle" style="width:13px;height:13px;"></i> Problema
-                            </span>
-                            <?php endif; ?>
-                        <?php elseif ($notif['tipo'] === 'solicitud_validacion'): ?>
-                            <?php if ($notif['estado'] === 'nueva' || $notif['estado'] === 'vista'): ?>
-                            <a href="<?= URL_BASE ?>views/jefa/validar.php" class="nf-btn-accion solicitud">
-                                <i data-lucide="clipboard-check" style="width:13px;height:13px;"></i> Ir a validar
-                            </a>
-                            <?php elseif ($notif['estado'] === 'revisada'): ?>
-                            <span class="nf-estado-label aprobado">
-                                <i data-lucide="check-circle" style="width:13px;height:13px;"></i> Atendida
-                            </span>
-                            <?php endif; ?>
+                        <?php if ($notif['estado'] === 'revisada'): ?>
+                        <span class="nf-estado-label aprobado">
+                            <i data-lucide="check-circle" style="width:13px;height:13px;"></i> Revisada
+                        </span>
+                        <?php elseif ($notif['estado'] === 'problema'): ?>
+                        <span class="nf-estado-label rechazado">
+                            <i data-lucide="alert-circle" style="width:13px;height:13px;"></i> Problema
+                        </span>
                         <?php endif; ?>
                         
                         <?php if ($noLeida): ?>
@@ -268,7 +252,6 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
 }
 
 /* Lista de notificaciones */
-.nf-lista { }
 .nf-row {
     display: flex;
     gap: 14px;
@@ -297,7 +280,8 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
 .nf-indicador.tipo-exportacion { background: var(--warning-bg); color: var(--warning-text); }
 .nf-indicador.tipo-alerta { background: var(--danger-bg); color: var(--danger-text); }
 .nf-indicador.tipo-info { background: var(--info-bg); color: var(--info-text); }
-.nf-indicador.tipo-solicitud { background: #ede9fe; color: #6d28d9; }
+.nf-indicador.tipo-aprobado { background: var(--success-bg); color: var(--success-text); }
+.nf-indicador.tipo-rechazado { background: var(--danger-bg); color: var(--danger-text); }
 
 /* Cuerpo */
 .nf-cuerpo { flex: 1; min-width: 0; }
@@ -325,10 +309,16 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
 .nf-origen {
     font-size: 12px;
     color: var(--text-secondary);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     display: flex;
     align-items: center;
     gap: 4px;
+}
+.nf-mensaje {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    line-height: 1.5;
 }
 
 /* Tags de datos extra */
@@ -370,28 +360,6 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
     border: none;
     cursor: pointer;
     transition: var(--transition);
-}
-.nf-btn-accion.aprobado {
-    background: var(--success-bg);
-    color: var(--success-text);
-}
-.nf-btn-accion.aprobado:hover { background: var(--success); color: white; }
-.nf-btn-accion.rechazado {
-    background: var(--danger-bg);
-    color: var(--danger-text);
-}
-.nf-btn-accion.rechazado:hover { background: var(--danger); color: white; }
-.nf-btn-accion.solicitud {
-    background: #ede9fe;
-    color: #6d28d9;
-    text-decoration: none;
-}
-.nf-btn-accion.solicitud:hover { background: #6d28d9; color: white; }
-.nf-mensaje {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
-    line-height: 1.5;
 }
 .nf-btn-accion.leer {
     background: transparent;
@@ -460,32 +428,6 @@ async function limpiarLeidasYRecargar() {
     
     await fetch(API_NF + '?action=eliminar_leidas');
     mostrarNotificacion('Notificaciones leidas eliminadas', 'success');
-    setTimeout(() => location.reload(), 800);
-}
-
-async function cambiarEstadoNotif(id, estado) {
-    if (estado === 'problema') {
-        const confirmado = await Swal.fire({
-            title: 'Reportar problema',
-            text: 'Se notificara al usuario que realizo la exportacion para que revise los datos.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#EF4444',
-            cancelButtonColor: '#64748B',
-            confirmButtonText: 'Si, reportar',
-            cancelButtonText: 'Cancelar'
-        });
-        if (!confirmado.isConfirmed) return;
-    }
-    
-    await fetch(API_NF + '?action=cambiar_estado&id=' + id + '&estado=' + estado);
-    
-    if (estado === 'problema') {
-        mostrarNotificacion('Problema reportado al usuario', 'warning');
-    } else {
-        mostrarNotificacion('Marcada como revisada', 'success');
-    }
-    
     setTimeout(() => location.reload(), 800);
 }
 </script>
