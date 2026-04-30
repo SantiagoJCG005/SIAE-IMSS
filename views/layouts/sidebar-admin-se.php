@@ -72,6 +72,10 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
     </nav>
     
     <div class="sidebar-footer">
+        <a href="<?= URL_BASE ?>views/perfil/cambiar-password.php" class="nav-item <?= $paginaActual === 'cambiar-password' ? 'active' : '' ?>">
+            <i data-lucide="key-round"></i>
+            <span>Cambiar contraseña</span>
+        </a>
         <a href="<?= URL_BASE ?>api/auth.php?action=logout" class="nav-item">
             <i data-lucide="log-out"></i>
             <span>Cerrar sesión</span>

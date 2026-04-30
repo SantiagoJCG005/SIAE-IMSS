@@ -9,15 +9,32 @@
 define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
 
 // Nombre de la base de datos
-// Lee desde variable de entorno Docker; si no existe usa el valor por defecto
 define('DB_NAME', getenv('DB_NAME') ?: 'siae_imss');
 
 // Usuario de la base de datos
 define('DB_USER', getenv('DB_USER') ?: 'root');
 
 // Contrasena de la base de datos
-// En Docker viene del archivo .env; en XAMPP usa el valor hardcodeado
-define('DB_PASS', getenv('DB_PASS') ?: 'Denji_2005');
+// Docker: lee desde .env automaticamente
+// XAMPP: carga el .env manualmente desde la raiz del proyecto
+$dbPass = getenv('DB_PASS');
+if ($dbPass === false || $dbPass === '') {
+    $envFile = __DIR__ . '/../.env';
+    if (file_exists($envFile)) {
+        foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $linea) {
+            if (strpos($linea, '#') === 0) continue;
+            [$clave, $valor] = array_pad(explode('=', $linea, 2), 2, '');
+            if (trim($clave) === 'DB_PASS') {
+                $dbPass = trim($valor);
+                break;
+            }
+        }
+    }
+}
+if ($dbPass === false || $dbPass === '') {
+    die('Error de configuracion: DB_PASS no esta definida. Crea un archivo .env en la raiz del proyecto.');
+}
+define('DB_PASS', $dbPass);
 
 // Tipo de codificacion de caracteres
 define('DB_CHARSET', 'utf8mb4');

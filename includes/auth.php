@@ -147,7 +147,8 @@ function iniciarSesion($username, $password) {
             'nombre_completo' => $usuario['nombre_completo'],
             'email' => $usuario['email'],
             'id_rol' => $usuario['id_rol'],
-            'rol_nombre' => $usuario['rol_nombre']
+            'rol_nombre' => $usuario['rol_nombre'],
+            'debe_cambiar_password' => (bool) $usuario['debe_cambiar_password']
         ];
         
         // Guarda registro en bitacora

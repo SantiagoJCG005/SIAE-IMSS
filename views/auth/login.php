@@ -53,10 +53,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // La funcion iniciarSesion() verifica en la base de datos si son correctos
         if (iniciarSesion($nombreUsuario, $contrasena)) {
 
-            // Si el login fue exitoso, redirige a la pagina principal del usuario
-            header('Location: ' . obtenerPaginaInicio());
+            // Si debe cambiar contrasena, redirige a la pantalla obligatoria
+            if (!empty($_SESSION['user']['debe_cambiar_password'])) {
+                header('Location: ' . URL_BASE . 'views/auth/cambiar-password.php');
+                exit;
+            }
 
-            // Termina la ejecucion
+            // Login normal — redirige a su pagina principal segun rol
+            header('Location: ' . obtenerPaginaInicio());
             exit;
 
         } else {

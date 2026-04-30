@@ -35,6 +35,16 @@ if ($entrada) {
     $accion = $entrada['action'] ?? $accion;
 }
 
+// Genera una contrasena temporal segura de 10 caracteres
+function generarPasswordTemporal() {
+    $chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789!@#$';
+    $password = '';
+    for ($i = 0; $i < 10; $i++) {
+        $password .= $chars[random_int(0, strlen($chars) - 1)];
+    }
+    return $password;
+}
+
 // Revisa que accion se va a ejecutar
 switch ($accion) {
 
@@ -102,52 +112,52 @@ switch ($accion) {
             respuestaError('El email ya esta registrado');
         }
         
-        // Inserta nuevo usuario
+        // Genera contrasena temporal — la real nunca se envia por correo
+        $passwordTemporal = generarPasswordTemporal();
+
+        // Inserta nuevo usuario con flag de cambio obligatorio
         $consulta = $conexion->prepare("
-            INSERT INTO usuarios (username, email, nombre_completo, password_hash, id_rol, activo, fecha_creacion)
-            VALUES (?, ?, ?, ?, ?, ?, NOW())
+            INSERT INTO usuarios (username, email, nombre_completo, password_hash, id_rol, activo, debe_cambiar_password, fecha_creacion)
+            VALUES (?, ?, ?, ?, ?, ?, 1, NOW())
         ");
-        
-        // Ejecuta con datos
+
         $resultado = $consulta->execute([
             $username,
             $email,
             $nombre,
-            password_hash($password, PASSWORD_DEFAULT), // Encripta contraseña
+            password_hash($passwordTemporal, PASSWORD_DEFAULT),
             $rol,
             $activo
         ]);
-        
-        // Si se creo correctamente
+
         if ($resultado) {
             registrarEnBitacora('CREAR_USUARIO', "Usuario creado: $username");
-            
-            // Construir URL absoluta para el login
+
             $protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' || $_SERVER['SERVER_PORT'] == 443) ? "https://" : "http://";
             $dominio = $_SERVER['HTTP_HOST'] ?? 'localhost';
             $urlLogin = $protocolo . $dominio . URL_BASE . "views/auth/login.php";
 
-            // Enviar correo con credenciales
+            // Solo se envia la contraseña temporal — el usuario debe cambiarla al primer login
             $cuerpo = "
                 <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;'>
-                    <h2 style='color: #2563EB;'>¡Bienvenido a SIAE-IMSS!</h2>
+                    <h2 style='color: #2563EB;'>Bienvenido a SIAE-IMSS</h2>
                     <p>Hola <strong>{$nombre}</strong>,</p>
-                    <p>Tu cuenta ha sido creada exitosamente por un administrador. A continuacion te proporcionamos tus datos de acceso:</p>
-                    <div style='background-color: #F3F4F6; padding: 15px; border-radius: 6px; margin: 20px 0;'>
+                    <p>Tu cuenta ha sido creada. Usa esta contrasena temporal para ingresar por primera vez:</p>
+                    <div style='background-color: #FEF3C7; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #F59E0B;'>
                         <p style='margin: 5px 0;'><strong>Usuario:</strong> {$username}</p>
-                        <p style='margin: 5px 0;'><strong>Contraseña:</strong> {$password}</p>
+                        <p style='margin: 5px 0;'><strong>Contrasena temporal:</strong> {$passwordTemporal}</p>
                     </div>
-                    <p>Te recomendamos guardar esta informacion en un lugar seguro. Si alguna vez olvidas tu contrasena, podras recuperarla desde la pantalla de inicio.</p>
+                    <p style='color: #DC2626;'><strong>Al ingresar, el sistema te pedira crear una nueva contraseña.</strong> Esta contraseña temporal expira despues del primer uso.</p>
                     <div style='text-align: center; margin: 30px 0;'>
-                        <a href='{$urlLogin}' style='background-color: #2563EB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;'>Iniciar Sesion Ahora</a>
+                        <a href='{$urlLogin}' style='background-color: #2563EB; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;'>Ingresar al Sistema</a>
                     </div>
                     <hr style='border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;'>
                     <p style='font-size: 12px; color: #9CA3AF; text-align: center;'>Sistema SIAE-IMSS. Este es un correo automatico, por favor no respondas.</p>
                 </div>
             ";
-            
-            enviarCorreo($email, "Tus credenciales de acceso - SIAE-IMSS", $cuerpo);
-            
+
+            enviarCorreo($email, "Acceso a SIAE-IMSS - Contraseña temporal", $cuerpo);
+
             respuestaExitosa(['id' => $conexion->lastInsertId()], 'Usuario creado correctamente');
         } else {
             respuestaError('Error al crear usuario');
@@ -308,6 +318,58 @@ switch ($accion) {
         exit;
         break;
         
+    // Cambiar contrasena del usuario actual
+    case 'cambiar_password':
+
+        $idUsuario = obtenerIdUsuarioActual();
+        $nuevaPassword = $entrada['nueva_password'] ?? '';
+        $confirmar = $entrada['confirmar_password'] ?? '';
+        $passwordActual = $entrada['password_actual'] ?? '';
+        $esForzado = isset($entrada['forzado']) && $entrada['forzado'] === true;
+
+        if (empty($nuevaPassword) || empty($confirmar)) {
+            respuestaError('Completa todos los campos');
+        }
+
+        if (strlen($nuevaPassword) < 8) {
+            respuestaError('La contrasena debe tener al menos 8 caracteres');
+        }
+
+        if ($nuevaPassword !== $confirmar) {
+            respuestaError('Las contrasenas no coinciden');
+        }
+
+        // Si no es cambio forzado, valida la contrasena actual
+        if (!$esForzado) {
+            if (empty($passwordActual)) {
+                respuestaError('Ingresa tu contrasena actual');
+            }
+            $consulta = $conexion->prepare("SELECT password_hash FROM usuarios WHERE id_usuario = ?");
+            $consulta->execute([$idUsuario]);
+            $usuario = $consulta->fetch();
+            if (!$usuario || !password_verify($passwordActual, $usuario['password_hash'])) {
+                respuestaError('La contrasena actual es incorrecta');
+            }
+        }
+
+        try {
+            // Actualiza contrasena y limpia el flag de cambio obligatorio
+            $consulta = $conexion->prepare("
+                UPDATE usuarios SET password_hash = ?, debe_cambiar_password = 0 WHERE id_usuario = ?
+            ");
+            $consulta->execute([password_hash($nuevaPassword, PASSWORD_DEFAULT), $idUsuario]);
+
+            // Actualiza el flag en la sesion activa
+            $_SESSION['user']['debe_cambiar_password'] = 0;
+
+            registrarEnBitacora('CAMBIAR_PASSWORD', 'Contrasena actualizada');
+            respuestaExitosa(null, 'Contrasena actualizada correctamente');
+
+        } catch (Exception $e) {
+            respuestaError('Error al actualizar contrasena');
+        }
+        break;
+
     // Accion no valida
     default:
         respuestaError('Accion no valida', 400);

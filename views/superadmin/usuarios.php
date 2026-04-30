@@ -370,16 +370,23 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
                     </div>
                 </div>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <!-- Aviso de contrasena automatica (solo al crear) -->
+                <div id="infoPasswordAuto" style="display:none; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px; padding:12px 16px; margin-bottom:4px; font-size:13px; color:#1D4ED8; gap:8px; align-items:flex-start;">
+                    <i data-lucide="info" style="width:15px;height:15px;flex-shrink:0;margin-top:1px;"></i>
+                    <span>Se generara una contraseña temporal automaticamente y se enviara al correo del usuario. El usuario debera cambiarla en su primer inicio de sesion.</span>
+                </div>
+<br>
+                <!-- Campos de contrasena (solo al editar) -->
+                <div id="seccionPassword" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                     <div class="form-group">
-                        <label class="form-label">Contraseña <span id="passHint">(requerida)</span></label>
-                        <input type="password" name="password" id="password" class="form-control" 
+                        <label class="form-label">Nueva Contraseña <span style="color:var(--text-muted); font-weight:400;">(dejar vacio para mantener)</span></label>
+                        <input type="password" name="password" id="password" class="form-control"
                                minlength="8" maxlength="50">
-                        <small class="form-text">Mínimo 8 caracteres</small>
+                        <small class="form-text">Minimo 8 caracteres</small>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Confirmar Contraseña</label>
-                        <input type="password" name="password_confirm" id="password_confirm" class="form-control" 
+                        <label class="form-label">Confirmar Nueva Contraseña</label>
+                        <input type="password" name="password_confirm" id="password_confirm" class="form-control"
                                minlength="8" maxlength="50">
                     </div>
                 </div>
@@ -472,17 +479,20 @@ function irAPagina(page) {
 function abrirModalUsuario() {
     // Configura el modal para modo "crear"
     document.getElementById('modalTitle').textContent = 'Nuevo Usuario';
-    document.getElementById('formUsuario').reset();      // Limpia el formulario
-    document.getElementById('id_usuario').value = '';    // Sin ID significa nuevo
-    document.getElementById('passHint').textContent = '(requerida)';
-    document.getElementById('password').required = true; // Contrasena obligatoria
-    
+    document.getElementById('formUsuario').reset();
+    document.getElementById('id_usuario').value = '';
+
+    // Modo crear: oculta campos de contrasena y muestra aviso de generacion automatica
+    document.getElementById('seccionPassword').style.display = 'none';
+    document.getElementById('infoPasswordAuto').style.display = 'flex';
+    document.getElementById('password').required = false;
+
     // Limpia los campos de nombre fragmentados
     document.getElementById('primer_nombre').value = '';
     document.getElementById('segundo_nombre').value = '';
     document.getElementById('apellido_paterno').value = '';
     document.getElementById('apellido_materno').value = '';
-    
+
     // Muestra el modal agregando la clase 'active'
     document.getElementById('modalUsuario').classList.add('active');
     
@@ -545,11 +555,12 @@ async function editarUsuario(id) {
         // Limpia los campos de contrasena
         document.getElementById('password').value = '';
         document.getElementById('password_confirm').value = '';
-        
-        // Contrasena no es obligatoria al editar
-        document.getElementById('passHint').textContent = '(dejar vacío para mantener)';
+
+        // Modo editar: muestra campos de contrasena y oculta aviso de generacion automatica
+        document.getElementById('seccionPassword').style.display = 'grid';
+        document.getElementById('infoPasswordAuto').style.display = 'none';
         document.getElementById('password').required = false;
-        
+
         // Muestra el modal
         document.getElementById('modalUsuario').classList.add('active');
         lucide.createIcons();

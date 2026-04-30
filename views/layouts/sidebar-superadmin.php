@@ -9,7 +9,8 @@
 // Obtiene el nombre del archivo PHP actual sin la extension
 // un ejemplo: si estamos en "usuarios.php", guarda "usuarios"
 // Esto sirve para saber que opcion del menu debe estar resaltada
-$currentPage = basename($_SERVER['PHP_SELF'], '.php');
+$paginaActual = basename($_SERVER['PHP_SELF'], '.php');
+
 
 // Obtiene los datos del usuario que esta logueado
 $currentUser = obtenerUsuarioActual();
@@ -40,28 +41,28 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
     <!-- Navegación -->
     <nav class="sidebar-nav">
         <?php // Cada enlace usa URL_BASE para formar la ruta completa ?>
-        <?php // Si $currentPage coincide con el nombre de la pagina, agrega la clase 'active' para resaltarla ?>
-        <a href="<?= URL_BASE ?>views/superadmin/dashboard.php" class="nav-item <?= $currentPage === 'dashboard' ? 'active' : '' ?>">
+        <?php // Si $paginaActual coincide con el nombre de la pagina, agrega la clase 'active' para resaltarla ?>
+        <a href="<?= URL_BASE ?>views/superadmin/dashboard.php" class="nav-item <?= $paginaActual === 'dashboard' ? 'active' : '' ?>">
             <i data-lucide="layout-dashboard"></i>
             <span>Inicio</span>
         </a>
-        <a href="<?= URL_BASE ?>views/superadmin/usuarios.php" class="nav-item <?= $currentPage === 'usuarios' ? 'active' : '' ?>">
+        <a href="<?= URL_BASE ?>views/superadmin/usuarios.php" class="nav-item <?= $paginaActual === 'usuarios' ? 'active' : '' ?>">
             <i data-lucide="users"></i>
             <span>Usuarios</span>
         </a>
-        <a href="<?= URL_BASE ?>views/superadmin/roles.php" class="nav-item <?= $currentPage === 'roles' ? 'active' : '' ?>">
+        <a href="<?= URL_BASE ?>views/superadmin/roles.php" class="nav-item <?= $paginaActual === 'roles' ? 'active' : '' ?>">
             <i data-lucide="shield"></i>
             <span>Roles</span>
         </a>
-        <a href="<?= URL_BASE ?>views/superadmin/catalogos.php" class="nav-item <?= $currentPage === 'catalogos' ? 'active' : '' ?>">
+        <a href="<?= URL_BASE ?>views/superadmin/catalogos.php" class="nav-item <?= $paginaActual === 'catalogos' ? 'active' : '' ?>">
             <i data-lucide="database"></i>
             <span>Catálogos</span>
         </a>
-        <a href="<?= URL_BASE ?>views/superadmin/bitacora.php" class="nav-item <?= $currentPage === 'bitacora' ? 'active' : '' ?>">
+        <a href="<?= URL_BASE ?>views/superadmin/bitacora.php" class="nav-item <?= $paginaActual === 'bitacora' ? 'active' : '' ?>">
             <i data-lucide="scroll-text"></i>
             <span>Bitácora</span>
         </a>
-        <a href="<?= URL_BASE ?>views/superadmin/configuracion.php" class="nav-item <?= $currentPage === 'configuracion' ? 'active' : '' ?>">
+        <a href="<?= URL_BASE ?>views/superadmin/configuracion.php" class="nav-item <?= $paginaActual === 'configuracion' ? 'active' : '' ?>">
             <i data-lucide="settings"></i>
             <span>Configuración</span>
         </a>
@@ -69,6 +70,10 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
     
 
     <div class="sidebar-footer">
+        <a href="<?= URL_BASE ?>views/perfil/cambiar-password.php" class="nav-item <?= $paginaActual === 'cambiar-password' ? 'active' : '' ?>">
+            <i data-lucide="key-round"></i>
+            <span>Cambiar contraseña</span>
+        </a>
         <?php // Enlace que llama al API de autenticacion con la accion logout para cerrar sesion ?>
         <a href="<?= URL_BASE ?>api/auth.php?action=logout" class="nav-item">
             <i data-lucide="log-out"></i>

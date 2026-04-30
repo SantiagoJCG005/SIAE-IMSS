@@ -6,7 +6,7 @@
  */
 
 // Obtiene la pagina actual para marcar el menu activo
-$currentPage = basename($_SERVER['PHP_SELF'], '.php');
+$paginaActual = basename($_SERVER['PHP_SELF'], '.php');
 
 // Obtiene los datos del usuario que esta logueado
 $currentUser = obtenerUsuarioActual();
@@ -34,21 +34,21 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
 
     <nav class="sidebar-nav">
         <?php // Cada enlace usa URL_BASE para formar la ruta completa ?>
-        <?php // Si $currentPage coincide con el nombre de la pagina, agrega la clase 'active' para resaltarla ?>
-            <a href="<?= URL_BASE ?>views/jefa/dashboard.php"  class="nav-item <?= $currentPage === 'dashboard' ? 'active' : '' ?>">
+        <?php // Si $paginaActual coincide con el nombre de la pagina, agrega la clase 'active' para resaltarla ?>
+            <a href="<?= URL_BASE ?>views/jefa/dashboard.php"  class="nav-item <?= $paginaActual === 'dashboard' ? 'active' : '' ?>">
             <i data-lucide="layout-dashboard"></i>
             <span>Inicio</span>
         </a>
-        <a href="<?= URL_BASE ?>views/jefa/carpetas.php" class="nav-item <?= $currentPage === 'carpetas' ? 'active' : '' ?>">
+        <a href="<?= URL_BASE ?>views/jefa/carpetas.php" class="nav-item <?= $paginaActual === 'carpetas' ? 'active' : '' ?>">
         <i data-lucide="folders"></i>
         <span>Carpetas</span>
          </a>
             
-        <a href="<?= URL_BASE ?>views/jefa/importar.php"  class="nav-item <?= $currentPage === 'importar' ? 'active' : '' ?>">
+        <a href="<?= URL_BASE ?>views/jefa/importar.php"  class="nav-item <?= $paginaActual === 'importar' ? 'active' : '' ?>">
         <i data-lucide="file-spreadsheet"></i>
         <span>Importar Excel</span>
         </a>
-        <a href="<?= URL_BASE ?>views/jefa/validar.php"  class="nav-item <?= $currentPage === 'validar' ? 'active' : '' ?>">
+        <a href="<?= URL_BASE ?>views/jefa/validar.php"  class="nav-item <?= $paginaActual === 'validar' ? 'active' : '' ?>">
         <i data-lucide="check-circle"></i>
         <span>Validar</span>
                     <?php
@@ -67,7 +67,7 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
                     }
                     ?>
              </a>
-       <a href="<?= URL_BASE ?>views/jefa/reportes.php"  class="nav-item <?= $currentPage === 'reportes' ? 'active' : '' ?>">
+       <a href="<?= URL_BASE ?>views/jefa/reportes.php"  class="nav-item <?= $paginaActual === 'reportes' ? 'active' : '' ?>">
      <i data-lucide="bar-chart-3"></i>
      <span>Reportes</span>
 
@@ -75,6 +75,10 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
      
     </nav>
     <div class="sidebar-footer">
+        <a href="<?= URL_BASE ?>views/perfil/cambiar-password.php" class="nav-item <?= $paginaActual === 'cambiar-password' ? 'active' : '' ?>">
+            <i data-lucide="key-round"></i>
+            <span>Cambiar contraseña</span>
+        </a>
         <?php // Enlace que llama al API de autenticacion con la accion logout para cerrar sesion ?>
         <a href="<?= URL_BASE ?>api/auth.php?action=logout" class="nav-item">
             <i data-lucide="log-out"></i>

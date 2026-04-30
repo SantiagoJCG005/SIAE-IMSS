@@ -1,3 +1,6 @@
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+
 -- =============================================
 -- SIAE-IMSS - Base de Datos Completa
 -- Sistema de Altas y Bajas IMSS
