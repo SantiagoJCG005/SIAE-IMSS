@@ -37,9 +37,10 @@ switch ($accion) {
     case 'listar_pendientes':
         
         try {
-            $consulta = $conexion->query("
-                SELECT t.*, 
-                       s.nombre as subcarpeta_nombre, 
+            // Usar prepare/execute para evitar concatenacion directa en la query
+            $consulta = $conexion->prepare("
+                SELECT t.*,
+                       s.nombre as subcarpeta_nombre,
                        c.nombre as carpeta_nombre,
                        u.nombre_completo as creador,
                        (SELECT COUNT(*) FROM tabla_alumnos WHERE id_tabla = t.id_tabla) as total_alumnos,
@@ -48,11 +49,12 @@ switch ($accion) {
                 INNER JOIN subcarpetas_imss s ON t.id_subcarpeta = s.id_subcarpeta
                 INNER JOIN carpetas_imss c ON s.id_carpeta = c.id_carpeta
                 LEFT JOIN usuarios u ON t.id_usuario_creacion = u.id_usuario
-                WHERE t.estado = 'borrador' 
-                  AND t.id_usuario_creacion != " . obtenerIdUsuarioActual() . "
+                WHERE t.estado = 'borrador'
+                  AND t.id_usuario_creacion != ?
                 ORDER BY t.fecha_creacion DESC
             ");
-            
+            $consulta->execute([obtenerIdUsuarioActual()]);
+
             respuestaExitosa($consulta->fetchAll());
             
         } catch (Exception $e) {

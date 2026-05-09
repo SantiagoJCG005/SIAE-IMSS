@@ -45,7 +45,7 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
         <span>Importar Excel</span>
         </a>
 
-        <a href="<?= URL_BASE ?>views/admin-se/historial.php" class="nav-item <?= $paginaActual === 'historial' ? 'active' : '' ?>">
+<a href="<?= URL_BASE ?>views/admin-se/historial.php" class="nav-item <?= $paginaActual === 'historial' ? 'active' : '' ?>">
             <i data-lucide="history"></i>
             <span>Mi Historial</span>
             <?php

@@ -15,6 +15,9 @@ exports/*
 # Configuracion local de Claude Code
 .claude/
 
+# Scripts de debug temporales
+dump*.php
+
 # Archivos de sistema
 .DS_Store
 Thumbs.db

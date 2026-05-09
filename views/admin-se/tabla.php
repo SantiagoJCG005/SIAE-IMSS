@@ -398,114 +398,7 @@ include __DIR__ . '/../layouts/sidebar-admin-se.php';
     </div>
 </div>
 
-<style>
-.info-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-.info-valor { font-weight: 600; font-size: 14px; }
-
-.header-row { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; }
-.header-acciones { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-
-.buscador-container { position: relative; min-width: 220px; }
-.buscador-icono { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-muted); }
-.buscador-input { padding-left: 38px; }
-
-.filtros-container { display: flex; gap: 4px; background: var(--bg-secondary); padding: 4px; border-radius: 8px; }
-.filtro-btn { padding: 6px 12px; border: none; background: transparent; border-radius: 6px; font-size: 12px; cursor: pointer; color: var(--text-secondary); transition: all 0.2s; white-space: nowrap; }
-.filtro-btn:hover { background: var(--bg-primary); color: var(--text-primary); }
-.filtro-btn.active { background: var(--primary); color: white; }
-
-.card-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 16px 20px; border-top: 1px solid var(--border-color); }
-.footer-info { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-secondary); }
-
-.paginacion-controles { display: flex; gap: 4px; align-items: center; }
-.paginacion-btn { min-width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-color); background: var(--bg-primary); border-radius: 6px; cursor: pointer; font-size: 13px; color: var(--text-primary); transition: all 0.2s; }
-.paginacion-btn:hover { background: var(--bg-secondary); border-color: var(--primary); }
-.paginacion-btn.active { background: var(--primary); border-color: var(--primary); color: white; }
-.paginacion-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.paginacion-ellipsis { padding: 0 8px; color: var(--text-muted); }
-
-.acciones-tabla { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border-color); }
-
-.seccion-modal { background: var(--bg-secondary); border-radius: 8px; margin-bottom: 16px; overflow: hidden; }
-.seccion-titulo { background: #E2E8F0; padding: 12px 16px; font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 8px; }
-.seccion-titulo i { width: 16px; height: 16px; }
-.seccion-titulo.warning { background: #FEF3C7; color: #92400E; }
-.seccion-contenido { padding: 16px; }
-
-.campos-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-.campo-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
-.campo-valor { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 6px; padding: 10px 12px; font-family: 'Courier New', monospace; font-size: 13px; }
-.campo-valor.bloqueado { background: #F1F5F9; color: #64748B; }
-.campo-valor.cuenta { background: #DBEAFE; border-color: #93C5FD; color: #1E40AF; font-weight: 600; }
-
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
-.input-upper { text-transform: uppercase; }
-
-.info-auto { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #DBEAFE; border-radius: 8px; margin-bottom: 20px; color: #1E40AF; font-size: 13px; }
-.info-auto i { width: 18px; height: 18px; }
-
-.alerta-form { padding: 12px 16px; border-radius: 8px; margin-top: 16px; display: flex; align-items: center; gap: 8px; }
-.alerta-form.error { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
-.alerta-form.warning { background: #FFFBEB; color: #92400E; border: 1px solid #FDE68A; }
-
-.fila-error { background: #FEF2F2 !important; }
-.fila-normalizado { background: #FFFBEB !important; }
-
-.alert { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 8px; }
-.alert-danger { background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; }
-.alert-success { background: #F0FDF4; color: #166534; border: 1px solid #BBF7D0; }
-.alert-info { background: #DBEAFE; color: #1E40AF; border: 1px solid #93C5FD; }
-.alert i { flex-shrink: 0; }
-
-/* ESTILOS DEL ESCÁNER */
-.escaner-container {
-    margin-bottom: 20px;
-    padding: 16px;
-    background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
-    border-radius: 12px;
-    border: 2px dashed #3B82F6;
-}
-.escaner-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-    color: #1D4ED8;
-    font-weight: 600;
-    font-size: 14px;
-}
-.escaner-header i {
-    width: 20px;
-    height: 20px;
-}
-.escaner-input {
-    text-align: center;
-    background: white;
-    border: 2px solid #93C5FD !important;
-    font-size: 14px;
-}
-.escaner-input:focus {
-    border-color: #3B82F6 !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-}
-.escaner-hint {
-    display: block;
-    margin-top: 8px;
-    text-align: center;
-    color: #6B7280;
-    font-size: 12px;
-}
-.campo-escaneado {
-    animation: escaneadoExito 0.5s ease;
-}
-@keyframes escaneadoExito {
-    0% { background-color: #D1FAE5; transform: scale(1.02); }
-    100% { background-color: white; transform: scale(1); }
-}
-
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.spin { animation: spin 1s linear infinite; }
-</style>
+<link rel="stylesheet" href="<?= URL_RECURSOS ?>css/admin-se/tabla.css">
 
 <script>
 const ID_TABLA = <?= $idTabla ?>;
@@ -556,7 +449,7 @@ function parsearEscaneoNSS(textoEscaneado) {
        
         
         // Extraer NSS - buscar "social:" seguido de 11 dígitos
-        const regexNSS = /social[:\s]+(\d{11})/i;
+        const regexNSS = /social[:\sÑ]+(\d{11})/i;
         const matchNSS = texto.match(regexNSS);
         if (matchNSS) {
             const nssCompleto = matchNSS[1];
@@ -564,17 +457,17 @@ function parsearEscaneoNSS(textoEscaneado) {
             resultado.dvAlumno = nssCompleto.substring(10, 11);
             console.log('NSS:', resultado.nss, 'DV:', resultado.dvAlumno);
         }
-        
+
         // Extraer CURP - 18 caracteres alfanuméricos después de "CURP:"
-        const regexCURP = /CURP[:\s]+([A-Z0-9]{18})/i;
+        const regexCURP = /CURP[:\sÑ]+([A-Z0-9]{18})/i;
         const matchCURP = texto.match(regexCURP);
         if (matchCURP) {
             resultado.curp = matchCURP[1].toUpperCase();
             console.log('CURP:', resultado.curp);
         }
-        
-        // Extraer Nombre - texto después de "Nombre:" hasta el siguiente |
-        const regexNombre = /Nombre[:\s]+([^|]+)/i;
+
+        // Extraer Nombre - texto después de "Nombre:" hasta el siguiente | ] }
+        const regexNombre = /Nombre[:\sÑ]+([^|}\]]+)/i;
         const matchNombre = texto.match(regexNombre);
         if (matchNombre) {
             const nombreCompleto = matchNombre[1].trim().toUpperCase().replace(/\s+/g, ' ');
@@ -766,7 +659,7 @@ function inicializarEscanerNSS() {
 async function cargarAlumnos() {
     const resp = await llamarApi(API_URL + '?action=obtener&id_tabla=' + ID_TABLA);
     if (!resp || !resp.success) {
-        document.getElementById('cuerpoTabla').innerHTML = `<tr><td colspan="${ES_BORRADOR ? 8 : 7}" style="text-align:center;padding:40px;color:var(--danger);">Error al cargar</td></tr>`;
+        document.getElementById('cuerpoTabla').innerHTML = `<tr><td colspan="${ES_BORRADOR ? 9 : 8}" style="text-align:center;padding:40px;color:var(--danger);">Error al cargar</td></tr>`;
         return;
     }
     alumnosData = resp.data.alumnos || [];
@@ -829,7 +722,7 @@ function renderizar() {
     }
 
     if (pagina.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-muted);">Sin resultados</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--text-muted);">Sin resultados</td></tr>';
         document.getElementById('controlesPaginacion').innerHTML = '';
         return;
     }

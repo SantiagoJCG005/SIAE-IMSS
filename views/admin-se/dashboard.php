@@ -209,22 +209,6 @@ include __DIR__ . '/../layouts/sidebar-admin-se.php';
     </div>
 </div>
 
-<style>
-.stat-card-danger {
-    border: 2px solid #FCA5A5;
-    animation: pulse-danger 2s infinite;
-}
-@keyframes pulse-danger {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2); }
-    50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
-}
-.alert-warning {
-    background: #FEF3C7;
-    border: 1px solid #FCD34D;
-    border-radius: 8px;
-    padding: 16px 20px;
-    color: #92400E;
-}
-</style>
+<link rel="stylesheet" href="<?= URL_RECURSOS ?>css/admin-se/dashboard.css">
 
 <?php include __DIR__ . '/../layouts/footer.php'; ?>

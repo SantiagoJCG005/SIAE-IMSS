@@ -43,7 +43,7 @@ function normalizarTexto($texto) {
     
     // Mapa de caracteres especiales
     $mapa = [
-        // Ñ -> # (requisito del cliente)
+        // Ñ -> # 
         'Ñ' => '#', 'ñ' => '#',
         // Vocales con acento
         'Á' => 'A', 'À' => 'A', 'Ä' => 'A', 'Â' => 'A',
@@ -123,12 +123,12 @@ function procesarDatosAlumno($datos) {
 function validarDatosAlumno($datos) {
     $errores = [];
     
-    // Validar NSS (10 digitos numericos)
+    // Validar NSS base (10 digitos — el digito verificador va en campo separado)
     $nss = $datos['numero_afiliacion'] ?? '';
     if (empty($nss)) {
-        $errores[] = 'NSS vacío';
+        $errores[] = 'NSS vacio';
     } elseif (!preg_match('/^\d{10}$/', $nss)) {
-        $errores[] = 'NSS debe ser 10 dígitos';
+        $errores[] = 'NSS debe ser 10 digitos';
     }
     
     // Validar digito verificador (1 digito)
@@ -359,11 +359,11 @@ switch ($accion) {
             }
             // ------------------------------------
             
-            // Obtiene alumnos de la tabla
             $consulta = $conexion->prepare("
-                SELECT * FROM tabla_alumnos 
-                WHERE id_tabla = ? 
-                ORDER BY numero_cuenta, id_registro
+                SELECT ta.*
+                FROM tabla_alumnos ta
+                WHERE ta.id_tabla = ?
+                ORDER BY ta.numero_cuenta, ta.id_registro
             ");
             $consulta->execute([$idTabla]);
             $tabla['alumnos'] = $consulta->fetchAll();

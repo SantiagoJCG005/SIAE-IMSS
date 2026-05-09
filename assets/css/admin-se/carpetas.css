@@ -1,0 +1,157 @@
+.carpeta-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-bottom: 16px;
+    overflow: hidden;
+}
+
+.carpeta-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--bg-secondary);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.carpeta-header:hover {
+    background: #E2E8F0;
+}
+
+.carpeta-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.carpeta-icon {
+    width: 40px;
+    height: 40px;
+    background: #DBEAFE;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2563EB;
+}
+
+.carpeta-nombre {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.carpeta-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.carpeta-acciones {
+    display: flex;
+    gap: 8px;
+}
+
+.carpeta-contenido {
+    padding: 0 20px 20px 20px;
+    display: none;
+}
+
+.carpeta-contenido.activo {
+    display: block;
+}
+
+.subcarpeta-item {
+    margin-left: 20px;
+    padding: 12px 16px;
+    border-left: 2px solid var(--border-color);
+    margin-top: 12px;
+}
+
+.subcarpeta-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.subcarpeta-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.subcarpeta-icon {
+    color: #F97316;
+}
+
+.subcarpeta-nombre {
+    font-weight: 500;
+}
+
+.tabla-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    margin-top: 8px;
+    margin-left: 20px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.tabla-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tabla-tipo-alta {
+    color: #22C55E;
+}
+
+.tabla-tipo-baja {
+    color: #EF4444;
+}
+
+.estado-borrador {
+    background: #FEF3C7;
+    color: #D97706;
+}
+
+.estado-validado {
+    background: #DBEAFE;
+    color: #2563EB;
+}
+
+.estado-enviado {
+    background: #D1FAE5;
+    color: #059669;
+}
+
+.agregar-subcarpeta {
+    margin-left: 20px;
+    margin-top: 12px;
+}
+
+.empty-carpetas {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+}
+
+.empty-carpetas i {
+    width: 64px;
+    height: 64px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}

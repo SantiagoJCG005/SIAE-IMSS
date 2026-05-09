@@ -1,0 +1,56 @@
+.tabla-pendiente {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.tabla-pendiente-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.tabla-pendiente-info h4 {
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tabla-pendiente-meta {
+    display: flex;
+    gap: 16px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.tabla-pendiente-acciones {
+    display: flex;
+    gap: 8px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+}
+
+.empty-state i {
+    width: 64px;
+    height: 64px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}

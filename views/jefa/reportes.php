@@ -219,46 +219,7 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
     </div>
 </div>
 
-<style>
-.stat-card {
-    background: var(--bg-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 20px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
-
-.stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.stat-label {
-    color: var(--text-secondary);
-    font-size: 14px;
-}
-
-.stat-value {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
-
-.spin {
-    animation: spin 1s linear infinite;
-}
-</style>
+<link rel="stylesheet" href="<?= URL_RECURSOS ?>css/jefa/reportes.css">
 
 <script>
 // Carga el reporte al iniciar

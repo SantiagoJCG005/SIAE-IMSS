@@ -191,32 +191,7 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
 
 <?php endif; ?>
 
-<style>
-.zona-archivo {
-    border: 2px dashed var(--border-color);
-    border-radius: 12px;
-    padding: 40px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.zona-archivo:hover,
-.zona-archivo.dragover {
-    border-color: var(--primary);
-    background: #EFF6FF;
-}
-
-.tipo-opcion:has(input:checked) {
-    border-color: var(--primary);
-    background: #EFF6FF;
-}
-
-#btnImportar:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-</style>
+<link rel="stylesheet" href="<?= URL_RECURSOS ?>css/jefa/importar.css">
 
 <script>
 const API_CARPETAS = '<?= URL_BASE ?>api/carpetas.php';

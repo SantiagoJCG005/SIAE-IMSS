@@ -142,12 +142,7 @@ include __DIR__ . '/../layouts/sidebar-admin-imss.php';
     </div>
 </div>
 
-<style>
-.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-.table td { vertical-align: middle; padding: 10px 16px; }
-.btn-sm { padding: 6px 12px; font-size: 13px; }
-</style>
-
+<link rel="stylesheet" href="<?= URL_RECURSOS ?>css/admin-imss/exportarImss.css">
 <script>
 const API_EXPORTAR = '<?= URL_BASE ?>api/exportar-txt.php';
 

@@ -8,9 +8,9 @@
  */
 function limpiar($entrada) {
 
-    // Si es un arreglo, limpia cada elemento
+    // Si es un arreglo, limpia cada elemento recursivamente
     if (is_array($entrada)) {
-        return array_map('sanitize', $entrada);
+        return array_map('limpiar', $entrada);
     }
 
     // Quita espacios y convierte caracteres especiales a seguro

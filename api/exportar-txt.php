@@ -116,8 +116,8 @@ function generarLineaAlta($alumno, $configPatronal, $fechaMov) {
     $linea .= $configPatronal['codigo_operacion_alta'] ?? '08';          // 132-133
     $linea .= '     ';                                                   // 134-138
     $linea .= formatearNumero($alumno['numero_cuenta'], 10);             // 139-148
-    $linea .= ' ';                                                       // 149
-    $linea .= formatearCampo($alumno['curp'] ?? '', 18);                 // 150-167
+    $linea .= formatearCampo($alumno['curp'] ?? '', 18);                 // 149-166
+    $linea .= ' ';                                                       // 167
     $linea .= '9';                                                       // 168
     return $linea;
 }
@@ -161,7 +161,7 @@ function generarLineaBaja($alumno, $configPatronal, $fechaMov) {
     $linea .= '00' . str_pad($codigoOpBaja, 2, '0', STR_PAD_LEFT);        // 130-133
     
     $linea .= '     ';                                                   // 134-138
-    $linea .= formatearNumero($alumno['numero_cuenta'], 10);             // 139-148
+    $linea .= formatearNumero(0, 10);                                    // 139-148 (siempre ceros en bajas)
     $linea .= '6';                                                       // 149
     $linea .= str_repeat(' ', 18);                                       // 150-167 (CURP vacío en bajas)
     $linea .= '9';                                                       // 168

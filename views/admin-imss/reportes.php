@@ -242,12 +242,8 @@ include __DIR__ . '/../layouts/sidebar-admin-imss.php';
     </div>
 </div>
 
-<style>
-.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-.table td { vertical-align: middle; padding: 10px 16px; }
-.form-control { height: 36px; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 0 10px; font-size: 13px; background: var(--bg-white); color: var(--text-primary); }
-.form-control:focus { outline: none; border-color: var(--secondary); }
-</style>
+
+<link rel="stylesheet" href="<?= URL_RECURSOS ?>css/admin-imss/reportesImss.css">
 
 <script>
 const API_TABLAS = '<?= URL_BASE ?>api/tablas.php';

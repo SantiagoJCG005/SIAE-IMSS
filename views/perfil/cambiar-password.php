@@ -1,10 +1,10 @@
 <?php
 /**
- * SIAE-IMSS - Cambio voluntario de contrasena
+ * SIAE-IMSS - Cambio voluntario de Contraseña
  * Accesible desde el sidebar de cualquier rol
  */
 
-$tituloPagina = 'Cambiar Contrasena';
+$tituloPagina = 'Cambiar Contraseña';
 $currentPage  = 'cambiar-password';
 
 require_once __DIR__ . '/../../config/config.php';
@@ -34,8 +34,8 @@ if ($sidebarArchivo) {
 
 <div class="page-header">
     <div>
-        <h1 class="page-title">Cambiar Contrasena</h1>
-        <p class="page-subtitle">Actualiza tu contrasena de acceso al sistema</p>
+        <h1 class="page-title">Cambiar Contraseña</h1>
+        <p class="page-subtitle">Actualiza tu contraseña de acceso al sistema</p>
     </div>
 </div>
 
@@ -48,15 +48,15 @@ if ($sidebarArchivo) {
         </div>
         <div id="msgExito" style="display:none; background:#DCFCE7; color:#166534; padding:12px 16px; border-radius:8px; font-size:14px; margin-bottom:16px; gap:10px; align-items:center;">
             <i data-lucide="check-circle" style="width:16px;height:16px;flex-shrink:0;"></i>
-            <span>Contrasena actualizada correctamente</span>
+            <span>Contraseña actualizada correctamente</span>
         </div>
 
         <form id="formCambiar">
 
             <div style="margin-bottom:18px;">
-                <label style="display:block; font-size:13px; font-weight:500; margin-bottom:6px;">Contrasena actual</label>
+                <label style="display:block; font-size:13px; font-weight:500; margin-bottom:6px;">Contraseña actual</label>
                 <div style="position:relative;">
-                    <input type="password" id="passwordActual" class="form-control" placeholder="Tu contrasena actual" style="padding-right:40px;">
+                    <input type="password" id="passwordActual" class="form-control" placeholder="Tu Contraseña actual" style="padding-right:40px;">
                     <button type="button" onclick="toggleOjo('passwordActual','ojo0')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94A3B8;cursor:pointer;">
                         <i data-lucide="eye" id="ojo0" style="width:16px;height:16px;"></i>
                     </button>
@@ -64,7 +64,7 @@ if ($sidebarArchivo) {
             </div>
 
             <div style="margin-bottom:18px;">
-                <label style="display:block; font-size:13px; font-weight:500; margin-bottom:6px;">Nueva contrasena</label>
+                <label style="display:block; font-size:13px; font-weight:500; margin-bottom:6px;">Nueva Contraseña</label>
                 <div style="position:relative;">
                     <input type="password" id="nuevaPassword" class="form-control" placeholder="Minimo 8 caracteres" style="padding-right:40px;">
                     <button type="button" onclick="toggleOjo('nuevaPassword','ojo1')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94A3B8;cursor:pointer;">
@@ -75,9 +75,9 @@ if ($sidebarArchivo) {
             </div>
 
             <div style="margin-bottom:24px;">
-                <label style="display:block; font-size:13px; font-weight:500; margin-bottom:6px;">Confirmar nueva contrasena</label>
+                <label style="display:block; font-size:13px; font-weight:500; margin-bottom:6px;">Confirmar nueva Contraseña</label>
                 <div style="position:relative;">
-                    <input type="password" id="confirmarPassword" class="form-control" placeholder="Repite la nueva contrasena" style="padding-right:40px;">
+                    <input type="password" id="confirmarPassword" class="form-control" placeholder="Repite la nueva Contraseña" style="padding-right:40px;">
                     <button type="button" onclick="toggleOjo('confirmarPassword','ojo2')" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:#94A3B8;cursor:pointer;">
                         <i data-lucide="eye" id="ojo2" style="width:16px;height:16px;"></i>
                     </button>
@@ -86,7 +86,7 @@ if ($sidebarArchivo) {
 
             <button type="submit" class="btn btn-primary" id="btnGuardar" style="width:100%;">
                 <i data-lucide="lock" style="width:15px;height:15px;"></i>
-                Actualizar contrasena
+                Actualizar Contraseña
             </button>
 
         </form>
@@ -124,13 +124,13 @@ document.getElementById('formCambiar').addEventListener('submit', async function
     }
 
     if (nueva.length < 8) {
-        document.getElementById('msgErrorTexto').textContent = 'La contrasena debe tener al menos 8 caracteres';
+        document.getElementById('msgErrorTexto').textContent = 'La Contraseña debe tener al menos 8 caracteres';
         msgError.style.display = 'flex';
         return;
     }
 
     if (nueva !== confirmar) {
-        document.getElementById('msgErrorTexto').textContent = 'Las contrasenas no coinciden';
+        document.getElementById('msgErrorTexto').textContent = 'Las Contraseñas no coinciden';
         msgError.style.display = 'flex';
         return;
     }

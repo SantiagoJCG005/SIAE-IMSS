@@ -66,8 +66,9 @@ function obtenerConexion() {
 
         } catch (PDOException $e) {
 
-            // Si ocurre error, detiene el sistema y muestra mensaje
-            die("Error de conexion: " . $e->getMessage());
+            // Loguea el error real sin exponerlo al navegador
+            error_log('[SIAE] Error de conexion BD: ' . $e->getMessage());
+            die('Error de conexion. Contacta al administrador del sistema.');
         }
     }
     

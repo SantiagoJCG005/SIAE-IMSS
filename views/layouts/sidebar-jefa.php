@@ -70,9 +70,13 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
        <a href="<?= URL_BASE ?>views/jefa/reportes.php"  class="nav-item <?= $paginaActual === 'reportes' ? 'active' : '' ?>">
      <i data-lucide="bar-chart-3"></i>
      <span>Reportes</span>
-
      </a>
-     
+
+        <a href="<?= URL_BASE ?>views/jefa/acuses.php" class="nav-item <?= $paginaActual === 'acuses' ? 'active' : '' ?>">
+            <i data-lucide="file-badge"></i>
+            <span>Acuses IMSS</span>
+        </a>
+
     </nav>
     <div class="sidebar-footer">
         <a href="<?= URL_BASE ?>views/perfil/cambiar-password.php" class="nav-item <?= $paginaActual === 'cambiar-password' ? 'active' : '' ?>">
