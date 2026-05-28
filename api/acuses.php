@@ -12,22 +12,27 @@
  *  estatus_nss GET  - Estatus IMSS actual de un NSS
  */
 
+// PHP - cargar autenticacion, funciones y el extractor de texto de PDF
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/PdfTextExtractor.php';
 
+// PHP - indicar que la respuesta es JSON
 header('Content-Type: application/json');
 
+// PHP - verificar sesion activa
 if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
+// PHP - solo Superadmin y Jefa de Servicios pueden gestionar acuses
 $rolesPermitidos = [ROL_SUPERADMIN, ROL_JEFA_SERVICIOS];
 if (!tieneAlgunRol($rolesPermitidos)) {
     respuestaError('Sin permisos para gestionar acuses', 403);
 }
 
 $conexion = obtenerConexion();
+// PHP - leer accion desde GET o POST
 $accion   = obtenerGet('action', obtenerPost('action', ''));
 
 switch ($accion) {
@@ -432,12 +437,14 @@ function accionConfirmar() {
                 WHERE nss = ? AND id_acuse_origen IS NULL
             ");
 
+            // PHP - procesar cada NSS: determinar resultado y actualizar estatus
             foreach ($nssList as $nss) {
                 $idAlumno   = $mapaAlumnos[$nss] ?? null;
                 $estatusAct = $mapaEstatus[$nss] ?? null;
                 $fechaExist = $estatusAct ? $estatusAct['fecha_movimiento'] : null;
                 $resultado  = '';
 
+                // PHP - datos del PDF para guardar en acuse_detalle
                 $dd = $datosDetallados[$nss][0] ?? [];
                 $nombrePdf   = $dd['nombre']    ?? null;
                 $apPat       = $dd['apellidos'] ?? null;
@@ -445,11 +452,13 @@ function accionConfirmar() {
                 $curpPdf     = $dd['curp']      ?? null;
 
                 if ($idAlumno === null) {
+                    // PHP - NSS no encontrado en el sistema
                     $resultado = 'no_encontrado';
                     $contNoEncontrados++;
                 } else {
                     $debeActualizar = true;
                     if ($estatusAct !== null) {
+                        // PHP - omitir si la fecha del acuse no es mas reciente que la registrada
                         $fechaExistDt = new DateTime($estatusAct['fecha_movimiento']);
                         if ($fechaDt <= $fechaExistDt) {
                             $debeActualizar = false;
@@ -457,15 +466,19 @@ function accionConfirmar() {
                     }
 
                     if ($debeActualizar) {
+                        // PHP - actualizar o insertar estatus IMSS del alumno
                         $resultado = 'procesado';
                         $contProcesados++;
 
                         if ($estatusAct === null) {
+                            // primera vez: insertar registro de estatus
                             $stmtInsertEstatus->execute([$nss, $idAlumno, $tipo, $fecha, $idAcuse]);
                         } else {
+                            // ya existe: actualizar fecha y tipo
                             $stmtUpdateEstatus->execute([$tipo, $fecha, $idAlumno, $idAcuse, $nss]);
                         }
                     } else {
+                        // PHP - NSS omitido porque la fecha del acuse no supera la existente
                         $resultado = 'omitido_por_fecha';
                         $contOmitidos++;
                         // Si el registro existente no tiene lote asignado, vincularlo al acuse actual
@@ -475,12 +488,14 @@ function accionConfirmar() {
                     }
                 }
 
+                // PHP - guardar linea de detalle del acuse con resultado individual
                 $stmtDetalle->execute([
                     $idAcuse, $nss, $idAlumno, $resultado, $fecha, $fechaExist,
                     $nombrePdf, $apPat, $apMat, $curpPdf
                 ]);
             }
 
+            // PHP - registrar las ocurrencias extra de NSS duplicados en el PDF
             foreach ($duplicadosNss as $dup) {
                 $nss      = $dup['nss'];
                 $veces    = $dup['veces'];
@@ -496,7 +511,7 @@ function accionConfirmar() {
             }
         }
 
-        // Actualizar conteos en el acuse
+        // PHP - actualizar conteos finales en el encabezado del acuse
         $stmt = $conexion->prepare("
             UPDATE acuses_imss
             SET procesados = ?, no_encontrados = ?, omitidos_por_fecha = ?
@@ -511,7 +526,7 @@ function accionConfirmar() {
         respuestaError('Error al guardar el acuse: ' . $e->getMessage());
     }
 
-    // Limpiar sesión
+    // PHP - limpiar acuse pendiente de la sesion del usuario
     unset($_SESSION[$sesionKey]);
 
     respuestaExitosa([
@@ -547,11 +562,12 @@ function accionCancelar() {
 }
 
 // ─────────────────────────────────────────────
-//  LISTAR – historial de acuses
+//  LISTAR – historial de acuses con paginacion
 // ─────────────────────────────────────────────
 function accionListar() {
     global $conexion;
 
+    // PHP - leer pagina actual y filtro de tipo desde la URL
     $pagina  = max(1, intval(obtenerGet('pagina', 1)));
     $limite  = 20;
     $offset  = ($pagina - 1) * $limite;
@@ -560,6 +576,7 @@ function accionListar() {
     $where  = '1=1';
     $params = [];
 
+    // PHP - agregar filtro de tipo si se especifico
     if (in_array($tipo, ['alta', 'baja'])) {
         $where   .= ' AND a.tipo = ?';
         $params[] = $tipo;

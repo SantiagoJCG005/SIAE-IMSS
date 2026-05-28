@@ -105,12 +105,13 @@ class PdfTextExtractor {
     }
 
     /**
-     * Intenta descomprimir con todos los métodos disponibles
+     * Intenta descomprimir con todos los metodos disponibles.
+     * Prueba zlib_decode, gzuncompress y gzinflate en orden de compatibilidad.
      */
     private static function descomprimir($data) {
         if (strlen($data) === 0) return false;
 
-        // zlib_decode: el más tolerante (PHP 5.4+)
+        // zlib_decode: el mas tolerante (PHP 5.4+), acepta cabecera o sin cabecera
         if (function_exists('zlib_decode')) {
             $r = @zlib_decode($data);
             if ($r !== false && strlen($r) > 0) return $r;
@@ -120,11 +121,11 @@ class PdfTextExtractor {
         $r = @gzuncompress($data);
         if ($r !== false && strlen($r) > 0) return $r;
 
-        // gzinflate sin cabecera zlib
+        // gzinflate: deflate raw sin cabecera zlib
         $r = @gzinflate($data);
         if ($r !== false && strlen($r) > 0) return $r;
 
-        // gzinflate saltando los 2 bytes de cabecera zlib
+        // gzinflate saltando los 2 bytes de cabecera zlib (algunos PDFs)
         $r = @gzinflate(substr($data, 2));
         if ($r !== false && strlen($r) > 0) return $r;
 

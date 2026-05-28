@@ -1,11 +1,16 @@
+/* ─── tarjeta de estadistica con alerta de peligro (borde rojo pulsante) ─── */
 .stat-card-danger {
     border: 2px solid #FCA5A5;
     animation: pulse-danger 2s infinite;
 }
+
+/* animacion de pulso rojo para alertas criticas */
 @keyframes pulse-danger {
     0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2); }
     50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
 }
+
+/* ─── alerta de advertencia en el dashboard ─── */
 .alert-warning {
     background: #FEF3C7;
     border: 1px solid #FCD34D;

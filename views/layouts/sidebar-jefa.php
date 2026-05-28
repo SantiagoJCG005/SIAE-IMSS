@@ -151,20 +151,25 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
 
 <!-- JavaScript para notificaciones -->
 <script>
+// JS - URL del API de notificaciones
 const API_NOTIF = '<?= URL_BASE ?>api/notificaciones.php';
+// JS - estado del panel: true = abierto, false = cerrado
 let notifDropdownAbierto = false;
 
+// JS - al cargar pagina: obtener contador y refrescarlo cada 60 segundos
 document.addEventListener('DOMContentLoaded', () => {
     cargarContadorNotificaciones();
     setInterval(cargarContadorNotificaciones, 60000);
 });
 
+// JS - cerrar panel de notificaciones al hacer clic fuera de el
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.notif-container') && notifDropdownAbierto) {
         cerrarNotificaciones();
     }
 });
 
+// JS - consultar API para obtener total de notificaciones no leidas y mostrar badge
 async function cargarContadorNotificaciones() {
     try {
         const resp = await fetch(API_NOTIF + '?action=contar');
@@ -184,6 +189,7 @@ async function cargarContadorNotificaciones() {
     }
 }
 
+// JS - abrir o cerrar el panel de notificaciones
 function toggleNotificaciones() {
     const dropdown = document.getElementById('notifDropdown');
     if (notifDropdownAbierto) {
@@ -195,11 +201,13 @@ function toggleNotificaciones() {
     }
 }
 
+// JS - ocultar panel de notificaciones
 function cerrarNotificaciones() {
     document.getElementById('notifDropdown').style.display = 'none';
     notifDropdownAbierto = false;
 }
 
+// JS - cargar lista de notificaciones recientes desde el API
 async function cargarNotificaciones() {
     const lista = document.getElementById('notifLista');
     lista.innerHTML = '<div class="notif-loading">Cargando...</div>';
@@ -224,7 +232,9 @@ async function cargarNotificaciones() {
     }
 }
 
+// JS - generar HTML de una fila de notificacion con icono, texto y botones de accion
 function renderNotificacion(n) {
+    // determinar clase CSS del icono segun tipo de notificacion
     const tipoClase = n.tipo === 'exportacion_txt' ? 'tipo-exportacion' : (n.tipo === 'alerta_problema' ? 'tipo-alerta' : 'tipo-info');
     const icono = n.tipo === 'exportacion_txt' ? 'file-output' : (n.tipo === 'alerta_problema' ? 'alert-triangle' : 'info');
     const noLeida = !n.leida ? 'no-leida' : '';
@@ -260,24 +270,28 @@ function renderNotificacion(n) {
     `;
 }
 
+// JS - marcar notificacion como leida al hacer clic en ella
 async function verNotificacion(id) {
     await fetch(API_NOTIF + '?action=marcar_leida&id=' + id);
     cargarContadorNotificaciones();
     cargarNotificaciones();
 }
 
+// JS - marcar todas las notificaciones como leidas
 async function marcarTodasLeidas() {
     await fetch(API_NOTIF + '?action=marcar_todas_leidas');
     cargarContadorNotificaciones();
     cargarNotificaciones();
 }
 
+// JS - eliminar una notificacion individual
 async function eliminarNotif(id) {
     await fetch(API_NOTIF + '?action=eliminar&id=' + id);
     cargarContadorNotificaciones();
     cargarNotificaciones();
 }
 
+// JS - eliminar todas las notificaciones ya leidas (pide confirmacion)
 async function limpiarLeidas() {
     const confirmado = await Swal.fire({
         title: 'Limpiar leídas',
@@ -297,6 +311,7 @@ async function limpiarLeidas() {
     mostrarNotificacion('Notificaciones leídas eliminadas', 'success');
 }
 
+// JS - cambiar estado de notificacion de exportacion: 'revisada' o 'problema'
 async function cambiarEstado(id, estado) {
     if (estado === 'problema') {
         const confirmado = await Swal.fire({
@@ -323,6 +338,7 @@ async function cambiarEstado(id, estado) {
     }
 }
 
+// JS - convertir fecha a texto relativo: "Ahora", "5 min", "2 h", "3 d"
 function tiempoRelativo(fecha) {
     const ahora = new Date();
     const notif = new Date(fecha);
@@ -335,6 +351,7 @@ function tiempoRelativo(fecha) {
     return notif.toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
 }
 
+// JS - escapar caracteres especiales para evitar XSS al insertar texto dinamico
 function escapeHtml(text) {
     if (!text) return '';
     const div = document.createElement('div');

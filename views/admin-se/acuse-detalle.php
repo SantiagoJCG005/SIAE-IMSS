@@ -1,19 +1,30 @@
 <?php
+/**
+ * SIAE-IMSS - Detalle de Acuse IMSS (Admin Servicios Escolares)
+ * Muestra todos los registros NSS procesados de un acuse especifico
+ */
+
+// PHP - titulo de pestana del navegador
 $tituloPagina = 'Detalle de Acuse IMSS';
 
+// PHP - cargar autenticacion y funciones generales
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/functions.php';
 
+// PHP - verificar rol permitido
 requerirRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN]);
 
+// PHP - leer y validar el ID del acuse desde la URL
 $idAcuse = intval($_GET['id'] ?? 0);
 if ($idAcuse <= 0) {
+    // PHP - redirigir si no hay ID valido
     header('Location: ' . URL_BASE . 'views/admin-se/acuses.php');
     exit;
 }
 
 $conexion = obtenerConexion();
 
+// PHP - consultar encabezado del acuse con nombre del usuario que lo subio
 $stmt = $conexion->prepare("
     SELECT a.*, u.nombre_completo AS subido_por
     FROM acuses_imss a
@@ -23,11 +34,13 @@ $stmt = $conexion->prepare("
 $stmt->execute([$idAcuse]);
 $acuse = $stmt->fetch();
 
+// PHP - redirigir si el acuse no existe
 if (!$acuse) {
     header('Location: ' . URL_BASE . 'views/admin-se/acuses.php');
     exit;
 }
 
+// PHP - consultar lineas del acuse: alumno original + alumno actual por NSS + estatus vigente
 $stmt = $conexion->prepare("
     SELECT d.*,
            CONCAT(a.apellido_paterno, ' ', a.apellido_materno, ' ', a.nombre) AS nombre_alumno,
@@ -47,7 +60,7 @@ $stmt = $conexion->prepare("
 $stmt->execute([$idAcuse]);
 $detalle = $stmt->fetchAll();
 
-// Búsqueda
+// PHP - filtrar en PHP si hay texto de busqueda (NSS, nombre o CURP)
 $buscar = trim($_GET['buscar'] ?? '');
 if ($buscar !== '') {
     $buscarUp = mb_strtoupper($buscar, 'UTF-8');
@@ -59,6 +72,7 @@ if ($buscar !== '') {
     }));
 }
 
+// PHP - calcular paginacion: 100 registros por pagina
 $porPagina    = 100;
 $totalDetalle = count($detalle);
 $totalPaginas = max(1, (int) ceil($totalDetalle / $porPagina));
@@ -66,12 +80,14 @@ $pagina       = max(1, min($totalPaginas, intval($_GET['pagina'] ?? 1)));
 $detalleVis   = array_slice($detalle, ($pagina - 1) * $porPagina, $porPagina);
 $offsetNum    = ($pagina - 1) * $porPagina;
 
+// PHP - calcular NSS duplicados del PDF: total - procesados - no_encontrados - omitidos
 $dupCalc = intval($acuse['total_registros'])
          - intval($acuse['procesados'])
          - intval($acuse['no_encontrados'])
          - intval($acuse['omitidos_por_fecha']);
 $dupCalc = max(0, $dupCalc);
 
+// PHP - detectar si hay NSS no_encontrados que ahora si existen (migraciones posteriores)
 $hayNuevosEnSistema = false;
 foreach ($detalle as $fila) {
     if ($fila['resultado'] === 'no_encontrado' && $fila['nombre_actual']) {
@@ -80,6 +96,7 @@ foreach ($detalle as $fila) {
     }
 }
 
+// PHP - incluir cabecera HTML y menu lateral del admin SE
 include __DIR__ . '/../layouts/header.php';
 include __DIR__ . '/../layouts/sidebar-admin-se.php';
 ?>
@@ -284,11 +301,14 @@ include __DIR__ . '/../layouts/sidebar-admin-se.php';
 </div>
 
 <script>
+// JS - tooltip personalizado para iconos de informacion (data-tip)
 (function () {
+    // crear elemento flotante que muestra el texto del tooltip
     const tt = document.createElement('div');
     tt.style.cssText = 'position:fixed;background:#1E293B;color:#F8FAFC;font-size:11px;line-height:1.5;padding:7px 10px;border-radius:6px;max-width:220px;white-space:normal;pointer-events:none;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.2);display:none;';
     document.body.appendChild(tt);
 
+    // JS - calcular posicion del tooltip cerca del cursor evitando bordes
     function place(e) {
         const w = tt.offsetWidth, h = tt.offsetHeight;
         let x = e.clientX - w / 2;
@@ -299,6 +319,7 @@ include __DIR__ . '/../layouts/sidebar-admin-se.php';
         tt.style.top  = y + 'px';
     }
 
+    // JS - asignar eventos a todos los iconos con data-tip
     document.querySelectorAll('.tip-icon[data-tip]').forEach(el => {
         el.addEventListener('mouseenter', e => { tt.textContent = el.dataset.tip; tt.style.display = 'block'; place(e); });
         el.addEventListener('mousemove',  place);

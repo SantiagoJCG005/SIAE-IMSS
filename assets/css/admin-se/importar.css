@@ -1,3 +1,4 @@
+/* ─── zona de arrastre para subir archivo Excel ─── */
 .zona-archivo {
     border: 2px dashed var(--border-color);
     border-radius: 12px;
@@ -7,17 +8,20 @@
     transition: all 0.2s;
 }
 
+/* resaltado al pasar el mouse o soltar el archivo */
 .zona-archivo:hover,
 .zona-archivo.dragover {
     border-color: var(--primary);
     background: #EFF6FF;
 }
 
+/* ─── opcion de tipo de importacion seleccionada ─── */
 .tipo-opcion:has(input:checked) {
     border-color: var(--primary);
     background: #EFF6FF;
 }
 
+/* ─── boton importar deshabilitado mientras no hay archivo ─── */
 #btnImportar:disabled {
     opacity: 0.5;
     cursor: not-allowed;

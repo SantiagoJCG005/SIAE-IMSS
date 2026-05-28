@@ -1,19 +1,28 @@
 <?php
+/**
+ * SIAE-IMSS - Estatus IMSS de Alumnos (Jefa de Servicios)
+ * Lista todos los alumnos con su estatus de registro ante el IMSS
+ */
+
+// PHP - titulo de pestana
 $tituloPagina = 'Estatus IMSS Alumnos';
 
+// PHP - cargar modulos de autenticacion y utilidades
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/functions.php';
 
+// PHP - verificar que sea Jefa o Superadmin
 requerirRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN]);
 
 $conexion = obtenerConexion();
 
+// PHP - parametros de busqueda, filtro de estatus y paginacion desde URL
 $buscar  = trim($_GET['buscar'] ?? '');
 $filtro  = $_GET['estatus'] ?? '';   // alta | baja | proceso | ''
 $pagina  = max(1, intval($_GET['pagina'] ?? 1));
 $porPagina = 50;
 
-// ── Contadores para los tabs ──────────────────────────────────────────────────
+// PHP - contar alumnos por cada estatus para mostrar en los tabs
 $counts = $conexion->query("
     SELECT
         SUM(CASE WHEN e.estatus = 'alta'  THEN 1 ELSE 0 END) AS altas,
@@ -25,21 +34,24 @@ $counts = $conexion->query("
     WHERE a.activo = 1
 ")->fetch();
 
-// ── Query principal ───────────────────────────────────────────────────────────
+// PHP - construir clausulas WHERE dinamicas segun busqueda y filtro de estatus
 $where  = ['a.activo = 1'];
 $params = [];
 
+// PHP - agregar condicion de busqueda si hay texto
 if ($buscar !== '') {
     $where[]  = '(a.numero_control LIKE ? OR a.nombre LIKE ? OR a.apellido_paterno LIKE ? OR a.apellido_materno LIKE ? OR di.nss LIKE ?)';
     $like     = "%$buscar%";
     $params   = array_merge($params, [$like, $like, $like, $like, $like]);
 }
 
+// PHP - agregar filtro de estatus segun tab seleccionado
 if ($filtro === 'alta') {
     $where[] = "e.estatus = 'alta'";
 } elseif ($filtro === 'baja') {
     $where[] = "e.estatus = 'baja'";
 } elseif ($filtro === 'proceso') {
+    // en proceso: alumno sin registro en estatus_imss_alumnos
     $where[] = 'e.id_alumno IS NULL';
 }
 

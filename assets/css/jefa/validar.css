@@ -1,3 +1,4 @@
+/* ─── tarjeta de tabla pendiente de validacion ─── */
 .tabla-pendiente {
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
@@ -6,6 +7,7 @@
     margin-bottom: 16px;
 }
 
+/* encabezado de la tarjeta con nombre y metadatos */
 .tabla-pendiente-header {
     display: flex;
     justify-content: space-between;
@@ -20,6 +22,7 @@
     gap: 8px;
 }
 
+/* metadatos: carrera, fecha, alumnos */
 .tabla-pendiente-meta {
     display: flex;
     gap: 16px;
@@ -27,11 +30,13 @@
     font-size: 14px;
 }
 
+/* botones de accion de la tarjeta */
 .tabla-pendiente-acciones {
     display: flex;
     gap: 8px;
 }
 
+/* ─── estado vacio cuando no hay tablas pendientes ─── */
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -46,6 +51,7 @@
     margin-bottom: 16px;
 }
 
+/* ─── animacion de carga (spin) ─── */
 @keyframes spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }

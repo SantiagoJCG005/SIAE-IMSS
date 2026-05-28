@@ -1,26 +1,33 @@
 <?php
 /**
  * SIAE-IMSS - Dashboard Estudiante (ROL 5)
+ * Muestra al alumno sus datos personales y su estatus de registro ante el IMSS
  */
 
+// PHP - titulo de pestana del navegador
 $tituloPagina = 'Mi Estatus IMSS';
 
+// PHP - cargar configuracion, base de datos, autenticacion y utilidades
 require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/functions.php';
 
+// PHP - solo el rol Estudiante puede acceder a esta vista
 requerirRol([ROL_ESTUDIANTE]);
 
 $conexion      = obtenerConexion();
 $sessionUser   = obtenerUsuarioActual();
+// PHP - el numero de control del alumno es el mismo que su username
 $numeroControl = $sessionUser['username'] ?? '';
 
+// PHP - variables inicializadas en null por si el alumno no tiene datos
 $alumno      = null;
 $datosImss   = null;
 $estatusImss = null;
 
 try {
+    // PHP - consultar datos del alumno vinculado a esta cuenta por numero de control
     $stmt = $conexion->prepare("
         SELECT a.*, c.nombre AS nombre_carrera
         FROM alumnos a
@@ -32,10 +39,12 @@ try {
     $alumno = $stmt->fetch();
 
     if ($alumno) {
+        // PHP - consultar NSS del alumno en la tabla de datos IMSS
         $stmt2 = $conexion->prepare("SELECT nss FROM datos_imss WHERE id_alumno = ? LIMIT 1");
         $stmt2->execute([$alumno['id_alumno']]);
         $datosImss = $stmt2->fetch();
 
+        // PHP - consultar el estatus IMSS mas reciente del alumno (alta o baja)
         $stmt3 = $conexion->prepare("
             SELECT e.estatus, e.fecha_movimiento
             FROM estatus_imss_alumnos e
@@ -47,29 +56,32 @@ try {
         $estatusImss = $stmt3->fetch();
     }
 } catch (Exception $e) {
-    // sin datos
+    // sin datos — no mostrar error tecnico al alumno
 }
 
-// Config de estatus
+// PHP - valores por defecto cuando no hay estatus registrado: "En proceso"
 $estatusLabel   = 'En proceso';
 $estatusColor   = '#64748B';
 $estatusBg      = '#F1F5F9';
 $estatusIcono   = 'clock';
-$estatusDesc    = 'Tu trámite de afiliación al IMSS está en proceso. Servicios Escolares te notificará cuando tu seguro social quede activo.';
+$estatusDesc    = 'Tu tramite de afiliacion al IMSS esta en proceso. Servicios Escolares te notificara cuando tu seguro social quede activo.';
 $estatusFechaLabel = '';
 
+// PHP - sobrescribir valores segun el estatus real del alumno
 if (!empty($estatusImss)) {
     $fechaFmt = date('d/m/Y', strtotime($estatusImss['fecha_movimiento']));
     switch ($estatusImss['estatus']) {
         case 'alta':
+            // PHP - alumno con alta IMSS activa: color verde
             $estatusLabel      = 'Alta IMSS';
             $estatusColor      = '#16A34A';
             $estatusBg         = '#F0FDF4';
             $estatusIcono      = 'shield-check';
-            $estatusDesc       = 'Tu seguro social está activo. Estás dado de alta ante el IMSS por el Tecnológico de Chetumal.';
+            $estatusDesc       = 'Tu seguro social esta activo. Estas dado de alta ante el IMSS por el Tecnologico de Chetumal.';
             $estatusFechaLabel = "Fecha de alta: <strong>$fechaFmt</strong>";
             break;
         case 'baja':
+            // PHP - alumno con baja IMSS: color rojo
             $estatusLabel      = 'Baja IMSS';
             $estatusColor      = '#DC2626';
             $estatusBg         = '#FFF5F5';
@@ -85,7 +97,7 @@ include __DIR__ . '/../layouts/sidebar-estudiante.php';
 ?>
 
 <style>
-    /* ── Bienvenida ── */
+    /* ─── banner de bienvenida con gradiente azul ─── */
     .dash-bienvenida {
         background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
         border-radius: 16px;
@@ -107,7 +119,7 @@ include __DIR__ . '/../layouts/sidebar-estudiante.php';
         flex-shrink: 0;
     }
 
-    /* ── Grid ── */
+    /* ─── grilla de 2 columnas: datos + estatus ─── */
     .dash-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -119,7 +131,7 @@ include __DIR__ . '/../layouts/sidebar-estudiante.php';
         .dash-bienvenida    { flex-direction: column; text-align: center; }
     }
 
-    /* ── Tarjetas ── */
+    /* ─── tarjeta de informacion del alumno ─── */
     .info-card {
         background: white;
         border-radius: 14px;
@@ -137,7 +149,7 @@ include __DIR__ . '/../layouts/sidebar-estudiante.php';
     .info-card-header i  { color: #2563EB; }
     .info-card-body { padding: 20px; }
 
-    /* ── Filas de datos ── */
+    /* ─── fila de dato individual: icono + label + valor ─── */
     .dato-fila {
         display: flex;
         align-items: center;
@@ -184,7 +196,7 @@ include __DIR__ . '/../layouts/sidebar-estudiante.php';
         font-size: 12px;
     }
 
-    /* ── Tarjeta Estatus — centrado ── */
+    /* ─── zona centrada de la tarjeta de estatus IMSS ─── */
     .estatus-centro {
         display: flex;
         flex-direction: column;
@@ -234,7 +246,7 @@ include __DIR__ . '/../layouts/sidebar-estudiante.php';
     }
     .estatus-fecha-chip i { width: 14px; height: 14px; color: #94A3B8; }
 
-    /* sin datos */
+    /* ─── mensaje cuando el alumno no tiene datos vinculados ─── */
     .sin-datos {
         text-align: center; padding: 40px 20px; color: #94A3B8;
     }

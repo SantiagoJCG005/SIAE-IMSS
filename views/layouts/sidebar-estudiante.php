@@ -1,10 +1,14 @@
 <?php
 /**
  * SIAE-IMSS - Sidebar para Estudiante (ROL 5)
+ * Menu lateral del portal del alumno con solo la vista de estatus IMSS
  */
 
+// PHP - obtener nombre del archivo actual para marcar el item activo del menu
 $paginaActual = basename($_SERVER['PHP_SELF'], '.php');
+// PHP - obtener datos del estudiante logueado
 $currentUser  = obtenerUsuarioActual();
+// PHP - iniciales y color de avatar generados desde el nombre del usuario
 $userInitials = obtenerIniciales($currentUser['nombre_completo'] ?? 'AL');
 $avatarColor  = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Alumno');
 ?>

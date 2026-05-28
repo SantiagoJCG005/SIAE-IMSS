@@ -4,13 +4,17 @@
  * Subir comprobantes de alta/baja del IMSS y actualizar estatus de alumnos
  */
 
+// PHP - titulo de pestana del navegador
 $tituloPagina = 'Acuses IMSS';
 
+// PHP - cargar autenticacion y funciones generales
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/functions.php';
 
+// PHP - solo Jefa y Superadmin pueden acceder (Admin SE usa la misma restriccion)
 requerirRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN]);
 
+// PHP - incluir cabecera HTML y menu lateral del admin SE
 include __DIR__ . '/../layouts/header.php';
 include __DIR__ . '/../layouts/sidebar-admin-se.php';
 ?>
@@ -178,15 +182,19 @@ include __DIR__ . '/../layouts/sidebar-admin-se.php';
 
 
 <script>
+// JS - URL base del API de acuses
 const API = '<?= URL_BASE ?>api/acuses.php';
+// JS - datos del preview en memoria y pagina activa del historial
 let previewData = null;
 let paginaHistorial = 1;
 
+// JS - al cargar pagina: mostrar historial e inicializar drag-drop
 document.addEventListener('DOMContentLoaded', () => {
     cargarHistorial();
     inicializarDragDrop();
 });
 
+// JS - inicializar eventos de arrastre en el area de carga de PDF
 function inicializarDragDrop() {
     const area = document.getElementById('uploadArea');
     area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag-over'); });
@@ -202,6 +210,7 @@ function inicializarDragDrop() {
     });
 }
 
+// JS - validar tipo PDF y mostrar nombre del archivo seleccionado
 function seleccionarArchivo(file) {
     if (file.type !== 'application/pdf') {
         Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo se aceptan archivos PDF.', confirmButtonColor: '#2563EB' });
@@ -213,6 +222,7 @@ function seleccionarArchivo(file) {
     document.getElementById('btnAnalizar').disabled = false;
 }
 
+// JS - limpiar seleccion actual y ocultar seccion de preview
 function limpiarSeleccion() {
     document.getElementById('inputPdf').value = '';
     document.getElementById('inputPdf')._file = null;
@@ -221,6 +231,7 @@ function limpiarSeleccion() {
     document.getElementById('seccionPreview').style.display = 'none';
 }
 
+// JS - enviar PDF al servidor y mostrar preview con NSS detectados
 async function analizarPdf() {
     const inputEl = document.getElementById('inputPdf');
     const file = inputEl._file || inputEl.files[0];
@@ -253,6 +264,7 @@ async function analizarPdf() {
     }
 }
 
+// JS - poblar el panel de preview con datos del acuse analizado
 function mostrarPreview(d) {
     previewData = d;
     document.getElementById('prevLote').value = d.numero_lote || '';
@@ -291,13 +303,16 @@ function mostrarPreview(d) {
     document.getElementById('seccionPreview').scrollIntoView({ behavior: 'smooth' });
 }
 
+// JS - filtro activo de la lista NSS: 'todos' | 'ok' | 'miss'
 let filtroPreview = 'todos';
+// JS - cambiar filtro y re-renderizar lista de NSS
 function filtrarPreview(f) {
     filtroPreview = f;
     document.querySelectorAll('[data-fprev]').forEach(b => b.classList.toggle('active', b.dataset.fprev === f));
     renderListaNss(previewData?.preview || []);
 }
 
+// JS - renderizar la lista de NSS filtrada en el contenedor HTML
 function renderListaNss(lista) {
     const filtrada = lista.filter(i => {
         if (filtroPreview === 'ok')   return i.en_sistema;
@@ -320,6 +335,7 @@ function renderListaNss(lista) {
     `).join('');
 }
 
+// JS - confirmar acuse: guardar en BD y actualizar estatus de alumnos
 async function confirmarAcuse() {
     const tipo  = document.getElementById('prevTipo').value;
     const fecha = document.getElementById('prevFecha').value;
@@ -382,12 +398,14 @@ async function confirmarAcuse() {
     }
 }
 
+// JS - cancelar acuse pendiente en la sesion del servidor
 async function cancelarAcuse() {
     await fetch(API + '?action=cancelar', { method: 'POST' });
     limpiarSeleccion();
     previewData = null;
 }
 
+// JS - cargar historial de acuses con paginacion y filtro de tipo
 async function cargarHistorial(pagina = 1) {
     paginaHistorial = pagina;
     const tipo = document.getElementById('filtroTipo').value;
@@ -397,6 +415,7 @@ async function cargarHistorial(pagina = 1) {
     renderHistorial(data.data);
 }
 
+// JS - dibujar filas del historial de acuses en la tabla
 function renderHistorial(d) {
     const tbody = document.getElementById('cuerpoHistorial');
 
@@ -439,6 +458,7 @@ function renderHistorial(d) {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// JS - generar botones de paginacion del historial
 function renderPaginacionHistorial(total) {
     const c = document.getElementById('paginacionHistorial');
     if (total <= 1) { c.innerHTML = ''; return; }
@@ -452,10 +472,12 @@ function renderPaginacionHistorial(total) {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// JS - navegar a la pagina de detalle del acuse seleccionado
 function verDetalle(idAcuse) {
     window.location.href = '<?= URL_BASE ?>views/admin-se/acuse-detalle.php?id=' + idAcuse;
 }
 
+// JS - eliminar un acuse y sus registros (pide confirmacion, solo Superadmin/Jefa)
 async function eliminarAcuse(idAcuse, lote) {
     const res = await Swal.fire({
         title: '¿Eliminar acuse?',
@@ -482,6 +504,7 @@ async function eliminarAcuse(idAcuse, lote) {
     cargarHistorial(paginaHistorial);
 }
 
+// JS - escapar HTML para prevenir XSS en texto dinamico
 function escapeHtml(t) {
     if (!t) return '';
     const d = document.createElement('div');
@@ -489,12 +512,14 @@ function escapeHtml(t) {
     return d.innerHTML;
 }
 
+// JS - convertir fecha YYYY-MM-DD a DD/MM/YYYY
 function formatearFecha(f) {
     if (!f) return '—';
     const p = f.split('-');
     return `${p[2]}/${p[1]}/${p[0]}`;
 }
 
+// JS - convertir datetime a formato legible DD/MM/YYYY HH:MM
 function formatearFechaHora(f) {
     if (!f) return '—';
     const d = new Date(f);
@@ -502,11 +527,14 @@ function formatearFechaHora(f) {
            ' ' + d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
 }
 
+// JS - tooltip personalizado para iconos de informacion con data-tip
 (function () {
+    // crear elemento flotante de tooltip
     const tt = document.createElement('div');
     tt.style.cssText = 'position:fixed;background:#1E293B;color:#F8FAFC;font-size:11px;line-height:1.5;padding:7px 10px;border-radius:6px;max-width:220px;white-space:normal;pointer-events:none;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.2);display:none;';
     document.body.appendChild(tt);
 
+    // JS - posicionar tooltip siguiendo el cursor, respetando bordes
     function place(e) {
         const w = tt.offsetWidth, h = tt.offsetHeight;
         let x = e.clientX - w / 2;
@@ -517,6 +545,7 @@ function formatearFechaHora(f) {
         tt.style.top  = y + 'px';
     }
 
+    // JS - inicializar listeners al cargar la pagina (los iconos se generan dinamicamente)
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.tip-icon[data-tip]').forEach(el => {
             el.addEventListener('mouseenter', e => { tt.textContent = el.dataset.tip; tt.style.display = 'block'; place(e); });

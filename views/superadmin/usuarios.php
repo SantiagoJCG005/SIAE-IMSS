@@ -746,19 +746,23 @@ document.getElementById('modalUsuario').addEventListener('click', (e) => {
 </style>
 
 <script>
+// JS - URL del API de migracion de alumnos desde Excel
 const API_MIGRAR = '<?= URL_BASE ?>api/migrar-alumnos.php';
 
+// JS - abrir modal de migracion en estado inicial
 function abrirModalMigracion() {
     resetearModalMigracion();
     document.getElementById('modalMigracion').classList.add('active');
     lucide.createIcons();
 }
 
+// JS - cerrar modal de migracion y limpiar su estado
 function cerrarModalMigracion() {
     document.getElementById('modalMigracion').classList.remove('active');
     resetearModalMigracion();
 }
 
+// JS - restaurar el modal al estado del formulario (ocultar resultados y procesando)
 function resetearModalMigracion() {
     document.getElementById('migForm').style.display        = 'block';
     document.getElementById('migProcesando').style.display  = 'none';
@@ -768,6 +772,7 @@ function resetearModalMigracion() {
     if (inp) inp.value = '';
 }
 
+// JS - enviar el Excel al servidor y mostrar resumen de la migracion
 async function ejecutarMigracion() {
     const input = document.getElementById('archivoMigracion');
     if (!input.files.length) {

@@ -1,16 +1,20 @@
 <?php
 /**
- * SIAE-IMSS - Acuses PDF IMSS
+ * SIAE-IMSS - Acuses PDF IMSS (Jefa de Servicios)
  * Subir comprobantes de alta/baja del IMSS y actualizar estatus de alumnos
  */
 
+// PHP - titulo de pestana del navegador
 $tituloPagina = 'Acuses IMSS';
 
+// PHP - cargar autenticacion y funciones generales
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/functions.php';
 
+// PHP - solo Jefa de Servicios y Superadmin pueden acceder
 requerirRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN]);
 
+// PHP - incluir cabecera HTML y menu lateral
 include __DIR__ . '/../layouts/header.php';
 include __DIR__ . '/../layouts/sidebar-jefa.php';
 ?>
@@ -178,16 +182,19 @@ include __DIR__ . '/../layouts/sidebar-jefa.php';
 
 
 <script>
+// JS - URL base del API de acuses
 const API = '<?= URL_BASE ?>api/acuses.php';
+// JS - datos del preview actual en memoria y pagina activa del historial
 let previewData = null;
 let paginaHistorial = 1;
 
+// JS - al cargar la pagina: mostrar historial e inicializar drag-drop
 document.addEventListener('DOMContentLoaded', () => {
     cargarHistorial();
     inicializarDragDrop();
 });
 
-// ── Drag & drop ──────────────────────────────
+// JS - inicializar eventos de drag and drop en el area de carga
 function inicializarDragDrop() {
     const area = document.getElementById('uploadArea');
     area.addEventListener('dragover', e => { e.preventDefault(); area.classList.add('drag-over'); });
@@ -203,6 +210,7 @@ function inicializarDragDrop() {
     });
 }
 
+// JS - validar tipo y mostrar nombre del archivo seleccionado
 function seleccionarArchivo(file) {
     if (file.type !== 'application/pdf') {
         Swal.fire({ icon: 'error', title: 'Formato no válido', text: 'Solo se aceptan archivos PDF.', confirmButtonColor: '#2563EB' });
@@ -214,6 +222,7 @@ function seleccionarArchivo(file) {
     document.getElementById('btnAnalizar').disabled = false;
 }
 
+// JS - limpiar seleccion y ocultar preview
 function limpiarSeleccion() {
     document.getElementById('inputPdf').value = '';
     document.getElementById('inputPdf')._file = null;
@@ -222,7 +231,7 @@ function limpiarSeleccion() {
     document.getElementById('seccionPreview').style.display = 'none';
 }
 
-// ── Analizar PDF ─────────────────────────────
+// JS - enviar PDF al servidor y mostrar preview con los NSS detectados
 async function analizarPdf() {
     const inputEl = document.getElementById('inputPdf');
     const file = inputEl._file || inputEl.files[0];
@@ -255,7 +264,7 @@ async function analizarPdf() {
     }
 }
 
-// ── Mostrar preview ──────────────────────────
+// JS - poblar el panel de preview con datos del acuse analizado
 function mostrarPreview(d) {
     previewData = d;
 
@@ -297,14 +306,16 @@ function mostrarPreview(d) {
     document.getElementById('seccionPreview').scrollIntoView({ behavior: 'smooth' });
 }
 
-// ── Lista NSS preview ────────────────────────
+// JS - filtro activo de la lista NSS: 'todos' | 'ok' | 'miss'
 let filtroPreview = 'todos';
+// JS - cambiar filtro y re-renderizar la lista de NSS
 function filtrarPreview(f) {
     filtroPreview = f;
     document.querySelectorAll('[data-fprev]').forEach(b => b.classList.toggle('active', b.dataset.fprev === f));
     renderListaNss(previewData?.preview || []);
 }
 
+// JS - renderizar la lista de NSS filtrada en el contenedor HTML
 function renderListaNss(lista) {
     const filtrada = lista.filter(i => {
         if (filtroPreview === 'ok')   return i.en_sistema;
@@ -320,14 +331,14 @@ function renderListaNss(lista) {
     document.getElementById('listaNss').innerHTML = filtrada.map(i => `
         <div class="nss-item">
             <span class="nss-code">${escapeHtml(i.nss)}</span>
-            ${i.duplicado ? '<span class="nss-badge badge-dup" title="Este NSS aparece más de una vez en el PDF">&#9888; Duplicado</span>' : ''}
+            ${i.duplicado ? '<span class="nss-badge badge-dup" title="Este NSS aparece mas de una vez en el PDF">&#9888; Duplicado</span>' : ''}
             <span class="nss-badge ${i.en_sistema ? 'badge-ok' : 'badge-miss'}">${i.en_sistema ? 'En sistema' : 'No encontrado'}</span>
             <span style="color:var(--text-secondary);">${escapeHtml(i.nombre || '—')}</span>
         </div>
     `).join('');
 }
 
-// ── Confirmar ────────────────────────────────
+// JS - confirmar acuse: guardar en BD y actualizar estatus de alumnos
 async function confirmarAcuse() {
     const tipo  = document.getElementById('prevTipo').value;
     const fecha = document.getElementById('prevFecha').value;
@@ -390,14 +401,14 @@ async function confirmarAcuse() {
     }
 }
 
-// ── Cancelar ─────────────────────────────────
+// JS - cancelar acuse pendiente en sesion del servidor
 async function cancelarAcuse() {
     await fetch(API + '?action=cancelar', { method: 'POST' });
     limpiarSeleccion();
     previewData = null;
 }
 
-// ── Historial ────────────────────────────────
+// JS - cargar historial de acuses desde el API con paginacion y filtro
 async function cargarHistorial(pagina = 1) {
     paginaHistorial = pagina;
     const tipo = document.getElementById('filtroTipo').value;
@@ -409,6 +420,7 @@ async function cargarHistorial(pagina = 1) {
     renderHistorial(data.data);
 }
 
+// JS - dibujar filas del historial de acuses en la tabla
 function renderHistorial(d) {
     const tbody = document.getElementById('cuerpoHistorial');
 
@@ -449,6 +461,7 @@ function renderHistorial(d) {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// JS - generar botones de paginacion del historial
 function renderPaginacionHistorial(total) {
     const c = document.getElementById('paginacionHistorial');
     if (total <= 1) { c.innerHTML = ''; return; }
@@ -462,10 +475,12 @@ function renderPaginacionHistorial(total) {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
+// JS - navegar a la pagina de detalle del acuse seleccionado
 function verDetalle(idAcuse) {
     window.location.href = '<?= URL_BASE ?>views/jefa/acuse-detalle.php?id=' + idAcuse;
 }
 
+// JS - eliminar un acuse y todos sus registros (pide confirmacion)
 async function eliminarAcuse(idAcuse, lote) {
     const res = await Swal.fire({
         title: '¿Eliminar acuse?',
@@ -492,7 +507,7 @@ async function eliminarAcuse(idAcuse, lote) {
     cargarHistorial(paginaHistorial);
 }
 
-// ── Utilidades ───────────────────────────────
+// JS - escapar HTML para evitar XSS al insertar texto dinamico
 function escapeHtml(t) {
     if (!t) return '';
     const d = document.createElement('div');
@@ -500,12 +515,14 @@ function escapeHtml(t) {
     return d.innerHTML;
 }
 
+// JS - convertir fecha YYYY-MM-DD a formato DD/MM/YYYY
 function formatearFecha(f) {
     if (!f) return '—';
     const p = f.split('-');
     return `${p[2]}/${p[1]}/${p[0]}`;
 }
 
+// JS - convertir datetime a formato DD/MM/YYYY HH:MM legible
 function formatearFechaHora(f) {
     if (!f) return '—';
     const d = new Date(f);

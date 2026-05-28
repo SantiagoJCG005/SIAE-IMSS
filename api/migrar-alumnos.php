@@ -5,25 +5,30 @@
  * Columnas requeridas: No. Control, Nombre. El resto es opcional pero se aprovecha si existe.
  */
 
+// PHP - responder en formato JSON
 header('Content-Type: application/json');
 
+// PHP - cargar autenticacion, funciones y modulo de correo
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/mail.php';
 
+// PHP - verificar sesion activa
 if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
+// PHP - solo el Superadmin puede ejecutar migraciones masivas
 if (!tieneRol(ROL_SUPERADMIN)) {
     respuestaError('Solo el Superadmin puede migrar alumnos', 403);
 }
 
 $conexion = obtenerConexion();
+// PHP - la unica accion valida es 'procesar'
 $accion   = $_POST['action'] ?? obtenerGet('action', '');
 
 if ($accion !== 'procesar') {
-    respuestaError('Acción no válida', 400);
+    respuestaError('Accion no valida', 400);
 }
 
 // ── Validar archivo ──────────────────────────────────────────────────────────
@@ -128,15 +133,16 @@ try {
     $smtpDisponible = false;
 }
 
+// PHP - contadores del resumen que se enviaran al cliente al terminar
 $resumen = [
-    'nuevos'              => 0,
-    'actualizados'        => 0,
-    'cuentas_creadas'     => 0,
-    'ya_existian'         => 0,
-    'errores'             => 0,
-    'sin_curp'            => 0,
-    'correos_enviados'    => 0,
-    'correos_fallidos'    => 0,
+    'nuevos'              => 0,  // alumnos insertados por primera vez
+    'actualizados'        => 0,  // alumnos que ya existian y se actualizaron
+    'cuentas_creadas'     => 0,  // cuentas de usuario nuevas creadas
+    'ya_existian'         => 0,  // cuentas de usuario que ya existian
+    'errores'             => 0,  // filas con error de procesamiento
+    'sin_curp'            => 0,  // alumnos importados sin CURP en el Excel
+    'correos_enviados'    => 0,  // correos de bienvenida enviados correctamente
+    'correos_fallidos'    => 0,  // correos que no se pudieron enviar
     'smtp_disponible'     => $smtpDisponible,
     'detalle_correos'     => [],
     'detalle_errores'     => [],
@@ -146,10 +152,11 @@ $urlLogin = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 
           . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost')
           . URL_BASE . 'views/auth/login.php';
 
+// PHP - procesar cada fila del Excel (la fila 0 es el encabezado, se omite)
 for ($i = 1; $i < count($filas); $i++) {
     $fila = $filas[$i];
 
-    // Ignorar filas vacías
+    // PHP - omitir filas completamente vacias
     $vacia = true;
     foreach ($fila as $celda) {
         if (trim($celda) !== '') { $vacia = false; break; }
