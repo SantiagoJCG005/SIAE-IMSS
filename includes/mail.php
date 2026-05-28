@@ -247,6 +247,62 @@ function plantillaCorreoBienvenida($nombre, $usuario, $password, $urlSistema) {
 }
 
 /**
+ * Plantilla de bienvenida específica para alumnos migrados desde Excel SII.
+ * No menciona "cambio de contraseña obligatorio" porque debe_cambiar_password = 0.
+ */
+function plantillaCorreoBienvenidaAlumno($nombre, $usuario, $urlSistema) {
+    return '
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <style>
+            body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; }
+            .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .header { background: #1a2744; color: white; padding: 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 22px; }
+            .header p  { margin: 6px 0 0; opacity: .85; font-size: 14px; }
+            .content { padding: 30px; }
+            .credentials { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0; }
+            .credentials p { margin: 8px 0; font-size: 15px; }
+            .credentials strong { color: #1a2744; }
+            .cred-val { font-family: monospace; font-size: 16px; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; }
+            .tip { background: #EFF6FF; border-left: 4px solid #2563EB; padding: 14px 16px; margin: 20px 0; font-size: 13px; color: #1D4ED8; }
+            .btn { display: inline-block; background: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; margin-top: 16px; font-weight: 600; }
+            .footer { background: #f8fafc; padding: 20px; text-align: center; color: #64748b; font-size: 12px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>🎓 SIAE-IMSS</h1>
+                <p>Instituto Tecnológico de Chetumal</p>
+            </div>
+            <div class="content">
+                <h2 style="margin-top:0;">Hola, ' . htmlspecialchars($nombre) . '</h2>
+                <p>Se ha activado tu acceso al portal de alumnos del <strong>SIAE-IMSS</strong>. Aquí podrás consultar tu estatus de afiliación ante el IMSS.</p>
+
+                <div class="credentials">
+                    <p><strong>Usuario:</strong> <span class="cred-val">' . htmlspecialchars($usuario) . '</span></p>
+                    <p><strong>Contraseña:</strong> <span class="cred-val">' . htmlspecialchars($usuario) . '</span></p>
+                </div>
+
+                <div class="tip">
+                    💡 Tu usuario y contraseña son tu <strong>número de control</strong>. Puedes cambiar la contraseña desde el portal una vez que ingreses.
+                </div>
+
+                <a href="' . htmlspecialchars($urlSistema) . '" class="btn">Ingresar al portal</a>
+            </div>
+            <div class="footer">
+                <p>Correo generado automáticamente — no responder.</p>
+                <p>SIAE-IMSS &copy; ' . date('Y') . ' · Tecnológico de Chetumal</p>
+            </div>
+        </div>
+    </body>
+    </html>';
+}
+
+/**
  * Genera plantilla HTML para correo de prueba
  */
 function plantillaCorreoPrueba() {

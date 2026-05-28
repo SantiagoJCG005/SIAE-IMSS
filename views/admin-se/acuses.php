@@ -73,6 +73,10 @@ include __DIR__ . '/../layouts/sidebar-admin-se.php';
             <div class="form-group">
                 <label class="form-label">Fecha del acuse *</label>
                 <input type="date" id="prevFecha" class="form-control">
+                <div id="prevFechaAviso" style="display:none; margin-top:6px; font-size:12px; color:#D97706; display:flex; align-items:center; gap:4px;">
+                    <i data-lucide="alert-triangle" style="width:13px;height:13px;flex-shrink:0;"></i>
+                    No se detectó la fecha en el PDF — ingresa la fecha manualmente.
+                </div>
             </div>
         </div>
 
@@ -258,6 +262,7 @@ function mostrarPreview(d) {
         ? '<span class="tipo-alta">&#9650; Alta</span>'
         : '<span class="tipo-baja">&#9660; Baja</span>';
     document.getElementById('prevFecha').value = d.fecha_detectada || '';
+    document.getElementById('prevFechaAviso').style.display = d.fecha_detectada ? 'none' : 'flex';
     document.getElementById('statTotal').textContent         = d.total_bruto_pdf ?? d.total_en_pdf ?? 0;
     document.getElementById('statEncontrados').textContent   = d.encontrados_sistema || 0;
     document.getElementById('statNoEncontrados').textContent = d.no_encontrados || 0;
@@ -320,6 +325,10 @@ async function confirmarAcuse() {
     const fecha = document.getElementById('prevFecha').value;
 
     if (!fecha) {
+        const el = document.getElementById('prevFecha');
+        el.style.borderColor = '#DC2626';
+        el.focus();
+        el.addEventListener('input', () => el.style.borderColor = '', { once: true });
         Swal.fire({ icon: 'warning', title: 'Falta la fecha', text: 'Ingresa la fecha de recepción del acuse.', confirmButtonColor: '#2563EB' });
         return;
     }
@@ -443,9 +452,8 @@ function renderPaginacionHistorial(total) {
     if(typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// ── Detalle en nueva ventana ──────────────────
 function verDetalle(idAcuse) {
-    window.open('<?= URL_BASE ?>views/admin-se/acuse-detalle.php?id=' + idAcuse, '_blank');
+    window.location.href = '<?= URL_BASE ?>views/admin-se/acuse-detalle.php?id=' + idAcuse;
 }
 
 async function eliminarAcuse(idAcuse, lote) {

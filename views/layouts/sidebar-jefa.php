@@ -48,6 +48,14 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
         <i data-lucide="file-spreadsheet"></i>
         <span>Importar Excel</span>
         </a>
+         <a href="<?= URL_BASE ?>views/jefa/acuses.php" class="nav-item <?= $paginaActual === 'acuses' ? 'active' : '' ?>">
+            <i data-lucide="file-badge"></i>
+            <span>Acuses IMSS</span>
+        </a>
+        <a href="<?= URL_BASE ?>views/jefa/estatus-imss.php" class="nav-item <?= $paginaActual === 'estatus-imss' ? 'active' : '' ?>">
+            <i data-lucide="shield-check"></i>
+            <span>Estatus IMSS</span>
+        </a>
         <a href="<?= URL_BASE ?>views/jefa/validar.php"  class="nav-item <?= $paginaActual === 'validar' ? 'active' : '' ?>">
         <i data-lucide="check-circle"></i>
         <span>Validar</span>
@@ -72,10 +80,7 @@ $avatarColor = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Superadmin
      <span>Reportes</span>
      </a>
 
-        <a href="<?= URL_BASE ?>views/jefa/acuses.php" class="nav-item <?= $paginaActual === 'acuses' ? 'active' : '' ?>">
-            <i data-lucide="file-badge"></i>
-            <span>Acuses IMSS</span>
-        </a>
+        
 
     </nav>
     <div class="sidebar-footer">

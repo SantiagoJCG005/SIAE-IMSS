@@ -97,12 +97,27 @@ switch ($accion) {
         
         // Si se guardo correctamente
         if ($resultado) {
+            $nuevoId = $conexion->lastInsertId();
 
             // Guarda registro en bitacora
             registrarEnBitacora('CREAR_CATALOGO', "Nuevo registro en $pestana");
 
+            // Al crear carrera: vincular alumnos que tenían ese nombre pero sin match
+            if ($pestana === 'carreras') {
+                $nombreCarrera = $entrada['nombre'] ?? '';
+                if ($nombreCarrera) {
+                    $conexion->prepare("
+                        UPDATE alumnos
+                        SET id_carrera = ?
+                        WHERE id_carrera IS NULL
+                          AND carrera_nombre_excel IS NOT NULL
+                          AND UPPER(TRIM(carrera_nombre_excel)) = UPPER(TRIM(?))
+                    ")->execute([$nuevoId, $nombreCarrera]);
+                }
+            }
+
             // Respuesta exitosa con el id creado
-            respuestaExitosa(['id' => $conexion->lastInsertId()], 'Registro creado correctamente');
+            respuestaExitosa(['id' => $nuevoId], 'Registro creado correctamente');
 
         } else {
             // Error si falla
@@ -161,6 +176,20 @@ switch ($accion) {
 
             // Guarda en bitacora
             registrarEnBitacora('EDITAR_CATALOGO', "Registro editado en $pestana (ID: $id)");
+
+            // Al editar carrera: reconciliar alumnos con ese nombre sin carrera asignada
+            if ($pestana === 'carreras') {
+                $nombreCarrera = $entrada['nombre'] ?? '';
+                if ($nombreCarrera) {
+                    $conexion->prepare("
+                        UPDATE alumnos
+                        SET id_carrera = ?
+                        WHERE id_carrera IS NULL
+                          AND carrera_nombre_excel IS NOT NULL
+                          AND UPPER(TRIM(carrera_nombre_excel)) = UPPER(TRIM(?))
+                    ")->execute([$id, $nombreCarrera]);
+                }
+            }
 
             // Respuesta exitosa
             respuestaExitosa(null, 'Registro actualizado correctamente');

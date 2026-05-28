@@ -33,11 +33,14 @@ $stmt = $conexion->prepare("
            CONCAT(a.apellido_paterno, ' ', a.apellido_materno, ' ', a.nombre) AS nombre_alumno,
            a.numero_control,
            CONCAT(a2.apellido_paterno, ' ', a2.apellido_materno, ' ', a2.nombre) AS nombre_actual,
-           a2.numero_control AS nc_actual
+           a2.numero_control AS nc_actual,
+           e.estatus          AS estatus_actual,
+           e.fecha_movimiento AS fecha_estatus_actual
     FROM acuse_detalle d
-    LEFT JOIN alumnos a   ON a.id_alumno  = d.id_alumno
-    LEFT JOIN datos_imss di ON di.nss      = d.nss
-    LEFT JOIN alumnos a2  ON a2.id_alumno  = di.id_alumno
+    LEFT JOIN alumnos a             ON a.id_alumno  = d.id_alumno
+    LEFT JOIN datos_imss di         ON di.nss       = d.nss
+    LEFT JOIN alumnos a2            ON a2.id_alumno = di.id_alumno
+    LEFT JOIN estatus_imss_alumnos e ON e.id_alumno = d.id_alumno
     WHERE d.id_acuse = ?
     ORDER BY d.resultado, d.nss
 ");
@@ -113,9 +116,9 @@ include __DIR__ . '/../layouts/sidebar-admin-se.php';
                 &nbsp;·&nbsp; <?= date('d/m/Y H:i', strtotime($acuse['fecha_subida'])) ?>
             </p>
         </div>
-        <button class="btn btn-ghost" style="margin-left:auto;" onclick="window.close()">
-            <i data-lucide="x"></i> Cerrar ventana
-        </button>
+        <a href="<?= URL_BASE ?>views/admin-se/acuses.php" class="btn btn-ghost" style="margin-left:auto;">
+            <i data-lucide="arrow-left"></i> Volver
+        </a>
     </div>
 </div>
 
@@ -199,6 +202,7 @@ include __DIR__ . '/../layouts/sidebar-admin-se.php';
                         <th>Nombre(s)</th>
                         <th>CURP</th>
                         <th><span class="tip-icon tip-icon-down" data-tip="✔ Procesado: estatus actualizado · ✘ No encontrado: NSS no está en el sistema · Omitido (fecha): fecha no más reciente que la registrada · ⚠ Duplicado NSS: repetido en el PDF, solo se procesó la primera ocurrencia">Resultado <i data-lucide="info"></i></span></th>
+                        <th>Estatus actual</th>
                         <th><span class="tip-icon tip-icon-down" data-tip="Muestra si ese NSS actualmente tiene un alumno en el sistema, incluyendo migraciones posteriores a la subida de este acuse.">En sistema hoy <i data-lucide="info"></i></span></th>
                     </tr>
                 </thead>
@@ -225,6 +229,25 @@ include __DIR__ . '/../layouts/sidebar-admin-se.php';
                         <td><?= $d['nombre_pdf'] ? htmlspecialchars($d['nombre_pdf']) : $dash ?></td>
                         <td style="font-family:monospace;font-size:11px;"><?= $d['curp_pdf'] ? htmlspecialchars($d['curp_pdf']) : $dash ?></td>
                         <td><?= $iconoRes ?></td>
+                        <td>
+                            <?php if ($d['estatus_actual'] === 'alta'): ?>
+                                <span style="display:inline-flex;align-items:center;gap:4px;background:#DCFCE7;color:#166534;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;">
+                                    &#9650; Alta
+                                </span>
+                                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+                                    <?= date('d/m/Y', strtotime($d['fecha_estatus_actual'])) ?>
+                                </div>
+                            <?php elseif ($d['estatus_actual'] === 'baja'): ?>
+                                <span style="display:inline-flex;align-items:center;gap:4px;background:#FEE2E2;color:#991B1B;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;">
+                                    &#9660; Baja
+                                </span>
+                                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+                                    <?= date('d/m/Y', strtotime($d['fecha_estatus_actual'])) ?>
+                                </div>
+                            <?php else: ?>
+                                <span style="color:var(--text-muted);font-size:12px;">En proceso</span>
+                            <?php endif; ?>
+                        </td>
                         <td><?= $enSistema ?></td>
                     </tr>
                 <?php endforeach; ?>

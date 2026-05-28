@@ -111,26 +111,57 @@ function accionSubir() {
     $duplicadosNss  = $nssDetalle['duplicados'];
     $datosDetallados = PdfTextExtractor::extraerLineasDetalladas($texto, $patronalConDV);
 
-    // Consultar cuáles NSS existen en el sistema
+    // Consultar cuáles alumnos existen en el sistema
+    // Alta → buscar por CURP (el alumno puede no tener NSS aún)
+    // Baja → buscar por NSS (ya tiene NSS registrado)
     $encontrados    = 0;
     $noEncontrados  = 0;
     $detallePreview = [];
 
     if (!empty($nssList)) {
-        $placeholders = implode(',', array_fill(0, count($nssList), '?'));
-        $stmt = $conexion->prepare("
-            SELECT d.nss, a.nombre, a.apellido_paterno, a.apellido_materno
-            FROM datos_imss d
-            INNER JOIN alumnos a ON a.id_alumno = d.id_alumno
-            WHERE d.nss IN ($placeholders)
-        ");
-        $stmt->execute($nssList);
-        $alumnosEncontrados = [];
-        while ($row = $stmt->fetch()) {
-            $alumnosEncontrados[$row['nss']] = $row['apellido_paterno'] . ' ' . $row['apellido_materno'] . ' ' . $row['nombre'];
-        }
-
         $nssConDuplicado = array_column($duplicadosNss, 'veces', 'nss');
+
+        if ($tipoDetect === 'alta') {
+            // Construir mapa CURP → NSS desde los datos detallados del PDF
+            $curpToNss = [];
+            foreach ($nssList as $nss) {
+                $curp = $datosDetallados[$nss][0]['curp'] ?? null;
+                if ($curp) $curpToNss[$curp] = $nss;
+            }
+
+            $alumnosEncontrados = []; // keyed by NSS
+            if (!empty($curpToNss)) {
+                $ph = implode(',', array_fill(0, count($curpToNss), '?'));
+                $stmt = $conexion->prepare("
+                    SELECT a.curp, a.nombre, a.apellido_paterno, a.apellido_materno
+                    FROM alumnos a
+                    WHERE a.curp IN ($ph)
+                ");
+                $stmt->execute(array_keys($curpToNss));
+                while ($row = $stmt->fetch()) {
+                    $nssDelCurp = $curpToNss[$row['curp']] ?? null;
+                    if ($nssDelCurp) {
+                        $alumnosEncontrados[$nssDelCurp] =
+                            $row['apellido_paterno'] . ' ' . $row['apellido_materno'] . ' ' . $row['nombre'];
+                    }
+                }
+            }
+        } else {
+            // Baja: buscar por NSS en datos_imss
+            $ph = implode(',', array_fill(0, count($nssList), '?'));
+            $stmt = $conexion->prepare("
+                SELECT d.nss, a.nombre, a.apellido_paterno, a.apellido_materno
+                FROM datos_imss d
+                INNER JOIN alumnos a ON a.id_alumno = d.id_alumno
+                WHERE d.nss IN ($ph)
+            ");
+            $stmt->execute($nssList);
+            $alumnosEncontrados = [];
+            while ($row = $stmt->fetch()) {
+                $alumnosEncontrados[$row['nss']] =
+                    $row['apellido_paterno'] . ' ' . $row['apellido_materno'] . ' ' . $row['nombre'];
+            }
+        }
 
         foreach ($nssList as $nss) {
             if (isset($alumnosEncontrados[$nss])) {
@@ -249,25 +280,124 @@ function accionConfirmar() {
         $contOmitidos      = 0;
         $contDuplicados    = 0;
 
+        $debugBaja = null; // DEBUG TEMPORAL
+
         if (!empty($nssList)) {
-            // Cargar todos los alumnos relevantes de una sola query
-            $placeholders = implode(',', array_fill(0, count($nssList), '?'));
-            $stmt = $conexion->prepare("
-                SELECT d.nss, d.id_alumno
-                FROM datos_imss d
-                WHERE d.nss IN ($placeholders)
-            ");
-            $stmt->execute($nssList);
-            $mapaAlumnos = [];
-            while ($row = $stmt->fetch()) {
-                $mapaAlumnos[$row['nss']] = $row['id_alumno'];
+            $mapaAlumnos = []; // nss => id_alumno
+
+            if ($tipo === 'alta') {
+                // Alta: vincular por CURP extraída del PDF
+                // El alumno puede no tener NSS registrado aún → se crea en datos_imss
+                $curpToNss = [];
+                foreach ($nssList as $nss) {
+                    $curp = $datosDetallados[$nss][0]['curp'] ?? null;
+                    if ($curp) $curpToNss[$curp] = $nss;
+                }
+
+                if (!empty($curpToNss)) {
+                    $ph = implode(',', array_fill(0, count($curpToNss), '?'));
+                    $stmt = $conexion->prepare("
+                        SELECT a.id_alumno, a.curp
+                        FROM alumnos a
+                        WHERE a.curp IN ($ph)
+                    ");
+                    $stmt->execute(array_keys($curpToNss));
+                    while ($row = $stmt->fetch()) {
+                        $nssDelCurp = $curpToNss[$row['curp']] ?? null;
+                        if ($nssDelCurp) {
+                            $mapaAlumnos[$nssDelCurp] = $row['id_alumno'];
+                            $stmtCheck = $conexion->prepare(
+                                "SELECT id_datos_imss FROM datos_imss WHERE id_alumno = ? LIMIT 1"
+                            );
+                            $stmtCheck->execute([$row['id_alumno']]);
+                            if (!$stmtCheck->fetch()) {
+                                $conexion->prepare("
+                                    INSERT INTO datos_imss (id_alumno, nss, estado_imss)
+                                    VALUES (?, ?, 'activo')
+                                ")->execute([$row['id_alumno'], $nssDelCurp]);
+                            } else {
+                                $conexion->prepare("
+                                    UPDATE datos_imss SET nss = ?, estado_imss = 'activo'
+                                    WHERE id_alumno = ?
+                                ")->execute([$nssDelCurp, $row['id_alumno']]);
+                            }
+                        }
+                    }
+                }
+
+                // Fallback: buscar por NSS en datos_imss para los que no matchearon por CURP
+                // Cubre el caso donde alumnos.curp está vacío pero el Excel tenía NSS
+                $nssNoEncontrados = array_diff($nssList, array_keys($mapaAlumnos));
+                if (!empty($nssNoEncontrados)) {
+                    $condNss  = [];
+                    $paramNss = [];
+                    foreach ($nssNoEncontrados as $nssItem) {
+                        $condNss[]  = '(d.nss = ? OR d.nss = ?)';
+                        $paramNss[] = $nssItem;
+                        $paramNss[] = substr($nssItem, 0, 10);
+                    }
+                    $stmtNss = $conexion->prepare("
+                        SELECT d.nss, d.id_alumno FROM datos_imss d
+                        WHERE " . implode(' OR ', $condNss)
+                    );
+                    $stmtNss->execute($paramNss);
+                    while ($row = $stmtNss->fetch()) {
+                        foreach ($nssNoEncontrados as $nssItem) {
+                            if ($row['nss'] === $nssItem || $row['nss'] === substr($nssItem, 0, 10)) {
+                                $mapaAlumnos[$nssItem] = (int) $row['id_alumno'];
+                                // Actualizar NSS completo y estado en datos_imss
+                                $conexion->prepare("
+                                    UPDATE datos_imss SET nss = ?, estado_imss = 'activo'
+                                    WHERE id_alumno = ?
+                                ")->execute([$nssItem, $row['id_alumno']]);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Baja: vincular por NSS en datos_imss
+                // JOIN flexible: busca por NSS completo (11) o base (10 dígitos)
+                $condiciones = [];
+                $paramsBaja  = [];
+                foreach ($nssList as $nssItem) {
+                    $condiciones[] = 'd.nss = ? OR d.nss = ?';
+                    $paramsBaja[]  = $nssItem;                    // 11 dígitos
+                    $paramsBaja[]  = substr($nssItem, 0, 10);     // 10 dígitos
+                }
+                $whereBaja = implode(' OR ', array_map(fn($c) => "($c)", $condiciones));
+                $stmt = $conexion->prepare("
+                    SELECT d.nss, d.id_alumno, d.estado_imss
+                    FROM datos_imss d
+                    WHERE $whereBaja
+                ");
+                $stmt->execute($paramsBaja);
+                $debugBajaRows = [];
+                while ($row = $stmt->fetch()) {
+                    $debugBajaRows[] = $row;
+                    // Vincular al NSS del PDF (11 dígitos) para que el resto del flujo sea consistente
+                    foreach ($nssList as $nssOrig) {
+                        if ($row['nss'] === $nssOrig || $row['nss'] === substr($nssOrig, 0, 10)) {
+                            $mapaAlumnos[$nssOrig] = $row['id_alumno'];
+                            break;
+                        }
+                    }
+                }
+                // DEBUG TEMPORAL — eliminar una vez resuelto el bug
+                $debugBaja = [
+                    'tipo_recibido'    => $tipo,
+                    'nss_list'         => $nssList,
+                    'datos_imss_rows'  => $debugBajaRows,
+                    'mapa_alumnos'     => $mapaAlumnos,
+                ];
+                error_log('[SIAE-DEBUG] Baja confirm: ' . json_encode($debugBaja));
             }
 
             // Cargar estatus actuales de estos NSS
+            $phNss = implode(',', array_fill(0, count($nssList), '?'));
             $stmt = $conexion->prepare("
-                SELECT nss, estatus, fecha_movimiento
+                SELECT nss, estatus, fecha_movimiento, id_acuse_origen
                 FROM estatus_imss_alumnos
-                WHERE nss IN ($placeholders)
+                WHERE nss IN ($phNss)
             ");
             $stmt->execute($nssList);
             $mapaEstatus = [];
@@ -293,6 +423,13 @@ function accionConfirmar() {
                 UPDATE estatus_imss_alumnos
                 SET estatus = ?, fecha_movimiento = ?, id_alumno = ?, id_acuse_origen = ?
                 WHERE nss = ?
+            ");
+
+            // Vincula registros huérfanos (sin lote de origen) al acuse actual
+            $stmtVincular = $conexion->prepare("
+                UPDATE estatus_imss_alumnos
+                SET id_acuse_origen = ?
+                WHERE nss = ? AND id_acuse_origen IS NULL
             ");
 
             foreach ($nssList as $nss) {
@@ -331,6 +468,10 @@ function accionConfirmar() {
                     } else {
                         $resultado = 'omitido_por_fecha';
                         $contOmitidos++;
+                        // Si el registro existente no tiene lote asignado, vincularlo al acuse actual
+                        if (($estatusAct['id_acuse_origen'] ?? null) === null) {
+                            $stmtVincular->execute([$idAcuse, $nss]);
+                        }
                     }
                 }
 
@@ -382,6 +523,7 @@ function accionConfirmar() {
         'no_encontrados'  => $contNoEncontrados,
         'omitidos'        => $contOmitidos,
         'duplicados'      => $contDuplicados,
+        'debug_baja'      => $debugBaja,
     ], 'Acuse confirmado y registros actualizados correctamente.');
 }
 
@@ -449,6 +591,7 @@ function accionListar() {
     ]);
 }
 
+ 
 // ─────────────────────────────────────────────
 //  DETALLE – líneas de un acuse
 // ─────────────────────────────────────────────
@@ -611,9 +754,18 @@ function accionEliminar() {
         @unlink($acuse['archivo_ruta']);
     }
 
+    // Revertir estatus: eliminar registros vinculados al acuse o huérfanos con NSS en este acuse
+    $conexion->prepare("
+        DELETE e FROM estatus_imss_alumnos e
+        WHERE e.id_acuse_origen = ?
+           OR (e.id_acuse_origen IS NULL AND e.nss IN (
+               SELECT d.nss FROM acuse_detalle d WHERE d.id_acuse = ?
+           ))
+    ")->execute([$idAcuse, $idAcuse]);
+
     // La FK con ON DELETE CASCADE borra acuse_detalle automáticamente
-    $stmt = $conexion->prepare("DELETE FROM acuses_imss WHERE id_acuse = ?");
-    $stmt->execute([$idAcuse]);
+    $conexion->prepare("DELETE FROM acuses_imss WHERE id_acuse = ?")
+             ->execute([$idAcuse]);
 
     respuestaExitosa(null, 'Acuse eliminado.');
 }

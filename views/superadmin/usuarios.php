@@ -98,10 +98,16 @@ include __DIR__ . '/../layouts/sidebar-superadmin.php';
         <h1 class="page-title">Usuarios</h1>
         <p class="page-subtitle">Panel de administración central de accesos y perfiles.</p>
     </div>
-    <button class="btn btn-primary" onclick="abrirModalUsuario()">
-        <i data-lucide="user-plus"></i>
-        Nuevo usuario
-    </button>
+    <div style="display:flex;gap:10px;">
+        <button class="btn btn-outline" onclick="abrirModalMigracion()">
+            <i data-lucide="file-spreadsheet"></i>
+            Migrar alumnos
+        </button>
+        <button class="btn btn-primary" onclick="abrirModalUsuario()">
+            <i data-lucide="user-plus"></i>
+            Nuevo usuario
+        </button>
+    </div>
 </div>
 
 <div class="filters">
@@ -668,6 +674,216 @@ document.addEventListener('keydown', (e) => {
 document.getElementById('modalUsuario').addEventListener('click', (e) => {
     // Solo cierra si el clic fue en el overlay, no en el contenido del modal
     if (e.target === e.currentTarget) cerrarModal();
+});
+</script>
+
+<!-- ── MODAL MIGRAR ALUMNOS ─────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modalMigracion">
+    <div class="modal" style="max-width:560px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Migrar alumnos desde Excel SII</h3>
+            <button class="modal-close" onclick="cerrarModalMigracion()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <!-- Estado: formulario -->
+            <div id="migForm">
+                <p style="font-size:13px;color:#64748B;margin-bottom:16px;">
+                    Sube el Excel exportado del SII. El sistema creará cuentas de estudiante
+                    automáticamente usando el No. de Control como usuario y contraseña inicial.
+                </p>
+                <div class="form-group">
+                    <label class="form-label">Archivo Excel (.xlsx)</label>
+                    <input type="file" id="archivoMigracion" class="form-control"
+                           accept=".xlsx" required>
+                </div>
+                <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:8px;
+                            padding:12px 16px;font-size:12px;color:#1D4ED8;margin-top:8px;">
+                    <strong>Columnas detectadas automáticamente:</strong> No. Control, Nombre,
+                    Apellido Paterno, Apellido Materno, Email, Teléfono, NSS, Carrera, CURP, Sexo.
+                    Solo "No. Control" y "Nombre" son obligatorias.
+                </div>
+            </div>
+
+            <!-- Estado: procesando -->
+            <div id="migProcesando" style="display:none;text-align:center;padding:32px 0;">
+                <i data-lucide="loader" style="width:40px;height:40px;color:#2563EB;
+                   display:block;margin:0 auto 12px;animation:spin 1s linear infinite;"></i>
+                <p style="color:#64748B;font-size:14px;">Procesando archivo...</p>
+            </div>
+
+            <!-- Estado: resultados -->
+            <div id="migResultados" style="display:none;">
+                <div id="migResumenGrid"
+                     style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                </div>
+                <div id="migColumnas" style="font-size:12px;color:#64748B;margin-bottom:12px;"></div>
+                <div id="migErroresDetalle" style="display:none;"></div>
+            </div>
+        </div>
+        <div class="modal-footer" id="migFooter">
+            <button type="button" class="btn btn-ghost" onclick="cerrarModalMigracion()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="ejecutarMigracion()">
+                <i data-lucide="upload"></i>
+                Iniciar migración
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+.mig-stat {
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    text-align: center;
+}
+.mig-stat-num { font-size: 26px; font-weight: 700; color: #1E293B; }
+.mig-stat-label { font-size: 12px; color: #64748B; margin-top: 2px; }
+</style>
+
+<script>
+const API_MIGRAR = '<?= URL_BASE ?>api/migrar-alumnos.php';
+
+function abrirModalMigracion() {
+    resetearModalMigracion();
+    document.getElementById('modalMigracion').classList.add('active');
+    lucide.createIcons();
+}
+
+function cerrarModalMigracion() {
+    document.getElementById('modalMigracion').classList.remove('active');
+    resetearModalMigracion();
+}
+
+function resetearModalMigracion() {
+    document.getElementById('migForm').style.display        = 'block';
+    document.getElementById('migProcesando').style.display  = 'none';
+    document.getElementById('migResultados').style.display  = 'none';
+    document.getElementById('migFooter').style.display      = 'flex';
+    const inp = document.getElementById('archivoMigracion');
+    if (inp) inp.value = '';
+}
+
+async function ejecutarMigracion() {
+    const input = document.getElementById('archivoMigracion');
+    if (!input.files.length) {
+        mostrarNotificacion('Selecciona un archivo Excel', 'warning');
+        return;
+    }
+
+    document.getElementById('migForm').style.display       = 'none';
+    document.getElementById('migProcesando').style.display = 'block';
+    document.getElementById('migFooter').style.display     = 'none';
+    lucide.createIcons();
+
+    const formData = new FormData();
+    formData.append('action', 'procesar');
+    formData.append('archivo', input.files[0]);
+
+    try {
+        const resp = await fetch(API_MIGRAR, { method: 'POST', body: formData });
+        const data = await resp.json();
+
+        document.getElementById('migProcesando').style.display = 'none';
+        document.getElementById('migResultados').style.display = 'block';
+        document.getElementById('migFooter').innerHTML =
+            '<button class="btn btn-primary" onclick="cerrarModalMigracion();location.reload();">Cerrar y actualizar</button>';
+        document.getElementById('migFooter').style.display = 'flex';
+
+        if (data.success) {
+            const r = data.data.resumen;
+            document.getElementById('migResumenGrid').innerHTML = `
+                <div class="mig-stat">
+                    <div class="mig-stat-num" style="color:#16A34A;">${r.cuentas_creadas}</div>
+                    <div class="mig-stat-label">Cuentas creadas</div>
+                </div>
+                <div class="mig-stat">
+                    <div class="mig-stat-num" style="color:#2563EB;">${r.ya_existian}</div>
+                    <div class="mig-stat-label">Ya existían</div>
+                </div>
+                <div class="mig-stat">
+                    <div class="mig-stat-num">${r.nuevos}</div>
+                    <div class="mig-stat-label">Alumnos nuevos</div>
+                </div>
+                <div class="mig-stat">
+                    <div class="mig-stat-num">${r.actualizados}</div>
+                    <div class="mig-stat-label">Alumnos actualizados</div>
+                </div>
+                ${(r.acuses_reconciliados > 0) ? `
+                <div class="mig-stat" style="grid-column:1/-1;border-color:#86EFAC;background:#F0FDF4;">
+                    <div class="mig-stat-num" style="color:#16A34A;">${r.acuses_reconciliados}</div>
+                    <div class="mig-stat-label">Registros IMSS vinculados automáticamente</div>
+                </div>` : ''}
+                ${!r.smtp_disponible ? `
+                <div class="mig-stat" style="grid-column:1/-1;border-color:#FCD34D;background:#FFFBEB;">
+                    <div class="mig-stat-num" style="font-size:18px;">⚠️</div>
+                    <div class="mig-stat-label">SMTP no configurado — no se enviaron correos.<br>
+                    Ve a <strong>Configuración → Correo SMTP</strong> para activarlo.</div>
+                </div>` : ''}
+                ${r.smtp_disponible && (r.correos_enviados > 0 || r.correos_fallidos > 0) ? `
+                <div class="mig-stat" style="border-color:#BAE6FD;background:#F0F9FF;">
+                    <div class="mig-stat-num" style="color:#0369A1;">${r.correos_enviados}</div>
+                    <div class="mig-stat-label">Correos enviados</div>
+                </div>
+                ${r.correos_fallidos > 0 ? `<div class="mig-stat" style="grid-column:1/-1;border-color:#FCA5A5;background:#FFF1F2;">
+                    <div class="mig-stat-num" style="color:#DC2626;">${r.correos_fallidos}</div>
+                    <div class="mig-stat-label">Correos fallidos — ${r.detalle_correos ? r.detalle_correos.join(', ') : ''}</div>
+                </div>` : ''}` : ''}
+                ${r.errores > 0 ? `
+                <div class="mig-stat" style="grid-column:1/-1;">
+                    <div class="mig-stat-num" style="color:#DC2626;">${r.errores}</div>
+                    <div class="mig-stat-label">Errores${r.detalle_errores && r.detalle_errores.length ? ': ' + r.detalle_errores.join(' | ') : ''}</div>
+                </div>` : ''}
+                ${r.errores_reconciliacion && r.errores_reconciliacion.length > 0 ? `
+                <div class="mig-stat" style="grid-column:1/-1;border-color:#FCA5A5;background:#FFF1F2;">
+                    <div class="mig-stat-num" style="color:#DC2626;">${r.errores_reconciliacion.length}</div>
+                    <div class="mig-stat-label">Error al vincular acuses IMSS automáticamente:<br><small>${r.errores_reconciliacion.join('<br>')}</small></div>
+                </div>` : ''}
+            `;
+
+            const noEnc = data.data.columnas_no_encontradas;
+            if (noEnc && noEnc.length > 0) {
+                document.getElementById('migColumnas').innerHTML =
+                    `<strong>Columnas no detectadas:</strong> ${noEnc.join(', ')} ` +
+                    `(los datos de esos campos quedarán vacíos).`;
+            }
+
+            if (r.errores > 0 && r.detalle_errores && r.detalle_errores.length > 0) {
+                const errBox = document.getElementById('migErroresDetalle');
+                errBox.style.display = 'block';
+                errBox.innerHTML = `<details style="font-size:12px;color:#991B1B;">
+                    <summary style="cursor:pointer;margin-bottom:6px;">Ver detalle de errores (${r.errores})</summary>
+                    <ul style="margin:0;padding-left:16px;">
+                        ${r.detalle_errores.map(e => `<li>${e}</li>`).join('')}
+                    </ul>
+                </details>`;
+            }
+
+        } else {
+            document.getElementById('migResumenGrid').innerHTML =
+                `<div style="grid-column:1/-1;color:#DC2626;font-size:14px;">
+                    Error: ${data.mensaje ?? 'Error desconocido'}
+                 </div>`;
+        }
+
+        lucide.createIcons();
+    } catch (err) {
+        document.getElementById('migProcesando').style.display = 'none';
+        document.getElementById('migResultados').style.display = 'block';
+        document.getElementById('migResumenGrid').innerHTML =
+            `<div style="grid-column:1/-1;color:#DC2626;font-size:14px;">
+                Error de red al procesar la migración.
+             </div>`;
+        document.getElementById('migFooter').style.display = 'flex';
+    }
+}
+
+document.getElementById('modalMigracion').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) cerrarModalMigracion();
 });
 </script>
 

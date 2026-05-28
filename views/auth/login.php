@@ -163,6 +163,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             justify-content: center;
             color: white;
         }
+
+        .logo-itche-header {
+            height: 38px;
+            width: auto;
+        }
+
+        .logo-separador {
+            width: 1px;
+            height: 28px;
+            background: var(--color-borde);
+        }
         
         .enlaces-encabezado {
             display: flex;
@@ -216,6 +227,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 15px;
             line-height: 1.6;
             margin-bottom: 32px;
+        }
+
+        .logo-itche {
+            display: block;
+            width: 110px;
+            height: auto;
+            margin-bottom: 24px;
         }
         
         .insignia-seguridad {
@@ -400,6 +418,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <header class="encabezado">
         <div class="logo">
+            <img src="<?= URL_BASE ?>assets/img/Escudo_ITCh_-R.jpg" alt="ITChe" class="logo-itche-header">
+            <div class="logo-separador"></div>
             <div class="logo-icono">
                 <i data-lucide="shield-check" style="width: 20px; height: 20px;"></i>
             </div>
@@ -415,7 +435,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="contenedor-login">
             <div class="info-login">
                 <h1>Bienvenido al Sistema<br><span>SIAE-IMSS</span></h1>
-                <p>Acceda a su portal administrativo para gestionar sus servicios de manera eficiente y segura.</p>
+                <p>Accede y mantén al día tus registros ante el IMSS de forma rápida, segura y desde un solo lugar.</p>
                 
                 <div class="insignia-seguridad">
                     <i data-lucide="shield-check"></i>

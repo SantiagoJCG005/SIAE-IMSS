@@ -442,21 +442,53 @@ class PdfTextExtractor {
     }
 
     /**
-     * Extrae la primera fecha dd/mm/yyyy, yyyy/mm/dd o de metadata PDF del texto
+     * Extrae la fecha del acuse IMSS del texto del PDF.
+     *
+     * Prioridad:
+     *  1. "Fecha acuse:"  dd/mm/yyyy  — la fecha oficial del comprobante IMSS
+     *  2. "Fecha recepción/movimiento/proceso:" dd/mm/yyyy
+     *  3. Cualquier "Fecha:" dd/mm/yyyy en el cuerpo
+     *  4. Primera dd/mm/yyyy encontrada en el cuerpo
+     *  5. Metadatos PDF (D:YYYYMMDD) — último recurso (es la fecha de creación del archivo,
+     *     no la del movimiento IMSS)
      */
     public static function extraerFecha($texto) {
-        // Fecha en metadatos PDF: D:YYYYMMDDHHmmSS
-        if (preg_match('/D:(\d{4})(\d{2})(\d{2})/', $texto, $m)) {
+        // 1. "Fecha acuse: 11/09/2025" — la más específica y confiable
+        if (preg_match('/fecha\s+acuse\s*:?\s*(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i', $texto, $m)) {
+            return $m[3] . '-' . $m[2] . '-' . $m[1];
+        }
+
+        // 2. "Fecha recepción / movimiento / proceso / emisión / vigencia" — formato dd/mm/yyyy
+        if (preg_match('/fecha\s+(?:de\s+)?(?:recepci[oó]n|movimiento|proceso|emisi[oó]n|vigencia)\s*:?\s*(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i', $texto, $m)) {
+            return $m[3] . '-' . $m[2] . '-' . $m[1];
+        }
+
+        // 2b. Mismo campo pero en formato ISO yyyy-mm-dd (PDFs "IMSS Desde su Empresa")
+        //     "Fecha y hora de recepción del lote: 2025-09-11 18:05"
+        if (preg_match('/fecha\s+(?:y\s+hora\s+(?:de\s+)?)?(?:recepci[oó]n|movimiento|proceso|emisi[oó]n|vigencia)(?:\s+del?\s+\w+)?\s*:?\s*(\d{4})-(\d{2})-(\d{2})/i', $texto, $m)) {
             return $m[1] . '-' . $m[2] . '-' . $m[3];
         }
-        // dd/mm/yyyy o dd-mm-yyyy
+
+        // 3. Cualquier "Fecha:" seguida de dd/mm/yyyy en el cuerpo
+        if (preg_match('/fecha\s*:?\s*(\d{2})[\/\-](\d{2})[\/\-](\d{4})/i', $texto, $m)) {
+            return $m[3] . '-' . $m[2] . '-' . $m[1];
+        }
+
+        // 4. Primera dd/mm/yyyy o dd-mm-yyyy en el cuerpo del documento
         if (preg_match('/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/', $texto, $m)) {
             return $m[3] . '-' . $m[2] . '-' . $m[1];
         }
-        // yyyy-mm-dd
-        if (preg_match('/(\d{4})[\/\-](\d{2})[\/\-](\d{2})/', $texto, $m)) {
+
+        // 4b. Primera fecha ISO yyyy-mm-dd válida (año 2000-2099) — fallback para este tipo de PDF
+        if (preg_match('/(20\d{2})-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])/', $texto, $m)) {
             return $m[1] . '-' . $m[2] . '-' . $m[3];
         }
+
+        // 5. Metadatos PDF: D:YYYYMMDDHHmmSS (fecha de creación del archivo, no del movimiento)
+        if (preg_match('/D:(\d{4})(\d{2})(\d{2})/', $texto, $m)) {
+            return $m[1] . '-' . $m[2] . '-' . $m[3];
+        }
+
         return null;
     }
 
