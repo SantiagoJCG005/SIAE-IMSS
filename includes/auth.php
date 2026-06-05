@@ -53,7 +53,7 @@ function obtenerRolActual() {
 /**
  * Verificar si tiene un rol especifico
  */
-function tieneRol($rolId) {
+function tieneRol(int $rolId): bool {
 
     // Compara el rol actual con el solicitado
     return obtenerRolActual() == $rolId;
@@ -61,14 +61,43 @@ function tieneRol($rolId) {
 
 /**
  * Verificar si tiene alguno de varios roles
+ * Para roles personalizados (ID > 5), verifica permisos equivalentes
  */
-function tieneAlgunRol($listaRoles) {
+function tieneAlgunRol(array $listaRoles): bool {
 
-    // Obtiene rol actual
     $currentRole = obtenerRolActual();
 
-    // Verifica si esta dentro del arreglo
-    return in_array($currentRole, $listaRoles);
+    // Roles del sistema (1-5): comparacion directa
+    if (in_array($currentRole, $listaRoles)) {
+        return true;
+    }
+
+    // Roles personalizados: verificar equivalencia por permisos
+    if ($currentRole > 5) {
+        $permisos = $_SESSION['user']['permisos'] ?? [];
+        if (empty($permisos)) return false;
+
+        // Permisos que equivalen a cada rol del sistema
+        // ver_alumnos y exportar_txt también dan acceso a vistas de admin-se (carpetas/tabla)
+        $equivalencias = [
+            ROL_SUPERADMIN      => ['crud_usuarios', 'gestion_catalogos', 'config_patronal'],
+            ROL_JEFA_SERVICIOS  => ['validar_movimientos', 'ver_bitacora', 'ver_reportes'],
+            ROL_ADMIN_SERVICIOS => ['altas_bajas', 'importar_excel', 'editar_datos', 'atender_incidencias', 'ver_alumnos', 'exportar_txt'],
+            ROL_ADMIN_IMSS      => ['ver_alumnos', 'exportar_txt', 'ver_reportes'],
+            ROL_ESTUDIANTE      => ['ver_datos', 'reportar_falla'],
+        ];
+
+        foreach ($listaRoles as $rolRequerido) {
+            if (!isset($equivalencias[$rolRequerido])) continue;
+            foreach ($equivalencias[$rolRequerido] as $permiso) {
+                if (in_array($permiso, $permisos)) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    return false;
 }
 
 /**
@@ -89,7 +118,7 @@ function requerirLogin() {
 /**
  * Verifica rol y redirige si no tiene permiso
  */
-function requerirRol($listaRoles) {
+function requerirRol(array|int $listaRoles): void {
 
     // Primero verifica que haya sesion
     requerirLogin();
@@ -112,16 +141,16 @@ function requerirRol($listaRoles) {
 /**
  * Funcion para iniciar sesion
  */
-function iniciarSesion($username, $password) {
+function iniciarSesion(string $username, string $password): bool {
 
     // Obtiene conexion a base de datos
     $conexion = obtenerConexion();
-    
-    // Consulta para obtener usuario y rol
+
+    // Consulta para obtener usuario, rol y permisos del rol
     $consulta = $conexion->prepare("
-        SELECT u.*, r.nombre as rol_nombre 
-        FROM usuarios u 
-        JOIN roles r ON u.id_rol = r.id_rol 
+        SELECT u.*, r.nombre as rol_nombre, r.permisos as rol_permisos
+        FROM usuarios u
+        JOIN roles r ON u.id_rol = r.id_rol
         WHERE u.username = ? AND u.activo = 1
     ");
 
@@ -130,14 +159,17 @@ function iniciarSesion($username, $password) {
 
     // Obtiene usuario
     $usuario = $consulta->fetch();
-    
+
     // Verifica que exista y que la contraseña sea correcta
     if ($usuario && password_verify($password, $usuario['password_hash'])) {
 
         // Actualiza ultimo login
         $updateStmt = $conexion->prepare("UPDATE usuarios SET ultimo_login = NOW() WHERE id_usuario = ?");
         $updateStmt->execute([$usuario['id_usuario']]);
-        
+
+        // Decodifica permisos del rol (relevante para roles personalizados ID > 5)
+        $permisosRol = json_decode($usuario['rol_permisos'] ?? '[]', true) ?: [];
+
         // Guarda datos en sesion
         $_SESSION['user_id'] = $usuario['id_usuario'];
 
@@ -148,15 +180,16 @@ function iniciarSesion($username, $password) {
             'email' => $usuario['email'],
             'id_rol' => $usuario['id_rol'],
             'rol_nombre' => $usuario['rol_nombre'],
+            'permisos' => $permisosRol,
             'debe_cambiar_password' => (bool) $usuario['debe_cambiar_password']
         ];
-        
+
         // Guarda registro en bitacora
         registrarEnBitacora('LOGIN', 'Inicio de sesion exitoso');
-        
+
         return true; // login correcto
     }
-    
+
     return false; // login incorrecto
 }
 
@@ -183,7 +216,7 @@ function cerrarSesion() {
 /**
  * Guardar acciones en bitacora
  */
-function registrarEnBitacora($accion, $detalle = '') {
+function registrarEnBitacora(string $accion, string $detalle = ''): void {
 
     // Si no hay sesion, no hace nada
     if (!estaLogueado()) return;
@@ -208,7 +241,7 @@ function registrarEnBitacora($accion, $detalle = '') {
             $_SERVER['HTTP_USER_AGENT'] ?? '' // navegador
         ]);
 
-    } catch (Exception $e) {
+    } catch (Exception) {
 
         // Ignora errores para no detener el sistema
     }
@@ -219,28 +252,27 @@ function registrarEnBitacora($accion, $detalle = '') {
  */
 function obtenerPaginaInicio() {
 
-    // Obtiene rol del usuario
     $rol = obtenerRolActual();
-    
-    // Decide a donde enviarlo segun su rol
-    switch ($rol) {
 
+    switch ($rol) {
         case ROL_SUPERADMIN:
             return URL_BASE . 'views/superadmin/dashboard.php';
-
         case ROL_JEFA_SERVICIOS:
             return URL_BASE . 'views/jefa/dashboard.php';
-
         case ROL_ADMIN_SERVICIOS:
             return URL_BASE . 'views/admin-se/dashboard.php';
-
         case ROL_ADMIN_IMSS:
             return URL_BASE . 'views/admin-imss/dashboard.php';
-
         case ROL_ESTUDIANTE:
             return URL_BASE . 'views/estudiante/dashboard.php';
-
         default:
-            return URL_BASE . 'views/auth/login.php';
+            // Roles personalizados (ID > 5)
+            $permisos = $_SESSION['user']['permisos'] ?? [];
+            // Si los únicos permisos son ver_datos/reportar_falla → ir directo a Mi información
+            $permisosExtra = array_diff($permisos, ['ver_datos', 'reportar_falla']);
+            if (empty($permisosExtra) && !empty(array_intersect(['ver_datos', 'reportar_falla'], $permisos))) {
+                return URL_BASE . 'views/estudiante/dashboard.php';
+            }
+            return URL_BASE . 'views/custom/dashboard.php';
     }
 }

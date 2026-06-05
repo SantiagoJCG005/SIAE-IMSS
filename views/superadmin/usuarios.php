@@ -488,10 +488,12 @@ function abrirModalUsuario() {
     document.getElementById('formUsuario').reset();
     document.getElementById('id_usuario').value = '';
 
-    // Modo crear: oculta campos de contrasena y muestra aviso de generacion automatica
+    // Modo crear: oculta y deshabilita campos de contrasena (se genera automaticamente)
     document.getElementById('seccionPassword').style.display = 'none';
     document.getElementById('infoPasswordAuto').style.display = 'flex';
     document.getElementById('password').required = false;
+    document.getElementById('password').disabled = true;
+    document.getElementById('password_confirm').disabled = true;
 
     // Limpia los campos de nombre fragmentados
     document.getElementById('primer_nombre').value = '';
@@ -562,10 +564,12 @@ async function editarUsuario(id) {
         document.getElementById('password').value = '';
         document.getElementById('password_confirm').value = '';
 
-        // Modo editar: muestra campos de contrasena y oculta aviso de generacion automatica
+        // Modo editar: muestra y habilita campos de contrasena, oculta aviso de generacion automatica
         document.getElementById('seccionPassword').style.display = 'grid';
         document.getElementById('infoPasswordAuto').style.display = 'none';
         document.getElementById('password').required = false;
+        document.getElementById('password').disabled = false;
+        document.getElementById('password_confirm').disabled = false;
 
         // Muestra el modal
         document.getElementById('modalUsuario').classList.add('active');

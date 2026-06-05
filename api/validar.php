@@ -17,8 +17,8 @@ if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
-// Solo Jefa de Servicios puede validar
-if (!tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+// Solo Jefa de Servicios y roles con validar_movimientos pueden usar esta API
+if (!tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN])) {
     respuestaError('Sin permisos para validar', 403);
 }
 

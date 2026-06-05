@@ -18,8 +18,8 @@ if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
-// Solo Jefa de Servicios, Admin Servicios y Admin IMSS pueden usar esta API
-if (!tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_SUPERADMIN) && !tieneRol(ROL_ADMIN_IMSS)) {
+// Jefa, Admin SE, Admin IMSS, Superadmin y roles con permisos equivalentes
+if (!tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_ADMIN_SERVICIOS, ROL_SUPERADMIN, ROL_ADMIN_IMSS])) {
     respuestaError('Sin permisos para esta accion', 403);
 }
 
@@ -352,7 +352,7 @@ switch ($accion) {
             
             
             // Si el usuario es Admin SE, validamos que él sea el creador de esta tabla
-            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+            if (tieneAlgunRol([ROL_ADMIN_SERVICIOS]) && !tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN])) {
                 if ($tabla['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
                     respuestaError('Acceso denegado: Esta tabla pertenece a otro usuario.', 403);
                 }
@@ -401,7 +401,7 @@ switch ($accion) {
             }
             
             
-            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+            if (tieneAlgunRol([ROL_ADMIN_SERVICIOS]) && !tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN])) {
                 if ($tabla['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
                     respuestaError('Acceso denegado: No puedes ver resultados de una tabla de otro usuario.', 403);
                 }
@@ -482,7 +482,7 @@ switch ($accion) {
             $condicionDueno = "";
             $parametros = [$nombre, $idTabla];
             
-            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+            if (tieneAlgunRol([ROL_ADMIN_SERVICIOS]) && !tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN])) {
                 $condicionDueno = " AND id_usuario_creacion = ? ";
                 $parametros[] = obtenerIdUsuarioActual();
             }
@@ -523,7 +523,7 @@ switch ($accion) {
         }
         
        
-        if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+        if (tieneAlgunRol([ROL_ADMIN_SERVICIOS]) && !tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN])) {
             if ($tabla['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
                 respuestaError('Acceso denegado: No puedes eliminar una tabla de otro usuario.', 403);
             }
@@ -571,7 +571,7 @@ switch ($accion) {
         }
         
         
-        if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+        if (tieneAlgunRol([ROL_ADMIN_SERVICIOS]) && !tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN])) {
             if ($tabla['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
                 respuestaError('Acceso denegado: No puedes agregar alumnos a una tabla de otro usuario.', 403);
             }
@@ -670,7 +670,7 @@ switch ($accion) {
         }
         
         
-        if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+        if (tieneAlgunRol([ROL_ADMIN_SERVICIOS]) && !tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN])) {
             if ($registro['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
                 respuestaError('Acceso denegado: No puedes editar alumnos en una tabla de otro usuario.', 403);
             }
@@ -763,7 +763,7 @@ switch ($accion) {
         }
         
       
-        if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+        if (tieneAlgunRol([ROL_ADMIN_SERVICIOS]) && !tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN])) {
             if ($registro['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
                 respuestaError('Acceso denegado: No puedes eliminar alumnos en una tabla de otro usuario.', 403);
             }
@@ -809,7 +809,7 @@ switch ($accion) {
                 respuestaError('Tabla no encontrada');
             }
 
-            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+            if (tieneAlgunRol([ROL_ADMIN_SERVICIOS]) && !tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN])) {
                 if ($tabla['id_usuario_creacion'] != obtenerIdUsuarioActual()) {
                     respuestaError('Acceso denegado', 403);
                 }

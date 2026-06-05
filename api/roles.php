@@ -17,8 +17,8 @@ if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
-// Solo el Superadmin puede gestionar roles
-if (!tieneRol(ROL_SUPERADMIN)) {
+// Superadmin y roles con crud_usuarios pueden gestionar roles
+if (!tieneAlgunRol([ROL_SUPERADMIN])) {
     respuestaError('Sin permisos para esta accion', 403);
 }
 

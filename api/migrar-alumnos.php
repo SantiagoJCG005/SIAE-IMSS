@@ -18,8 +18,8 @@ if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
-// PHP - solo el Superadmin puede ejecutar migraciones masivas
-if (!tieneRol(ROL_SUPERADMIN)) {
+// PHP - solo el Superadmin y roles con crud_usuarios pueden ejecutar migraciones masivas
+if (!tieneAlgunRol([ROL_SUPERADMIN])) {
     respuestaError('Solo el Superadmin puede migrar alumnos', 403);
 }
 

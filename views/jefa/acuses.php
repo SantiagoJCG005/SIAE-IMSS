@@ -11,8 +11,8 @@ $tituloPagina = 'Acuses IMSS';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/functions.php';
 
-// PHP - solo Jefa de Servicios y Superadmin pueden acceder
-requerirRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN]);
+// PHP - Jefa, Superadmin y roles con ver_alumnos (Admin IMSS equivalente) pueden acceder
+requerirRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN, ROL_ADMIN_IMSS]);
 
 // PHP - incluir cabecera HTML y menu lateral
 include __DIR__ . '/../layouts/header.php';

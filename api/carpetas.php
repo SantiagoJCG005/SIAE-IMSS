@@ -17,8 +17,8 @@ if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
-// Solo Jefa de Servicios y Admin Servicios pueden usar esta API
-if (!tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+// Solo Jefa de Servicios, Admin Servicios y roles con permisos equivalentes
+if (!tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_ADMIN_SERVICIOS, ROL_SUPERADMIN])) {
     respuestaError('Sin permisos para esta accion', 403);
 }
 
@@ -45,8 +45,9 @@ switch ($accion) {
             $condicionAdicional = "";
             $parametros = [];
             
-            // Si es Admin SE y NO es Jefa ni Superadmin, solo ve lo suyo
-            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+            // Admin SE (y roles personalizados equivalentes) solo ven sus propias carpetas
+            // Jefa y Superadmin ven todas
+            if (tieneAlgunRol([ROL_ADMIN_SERVICIOS]) && !tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN])) {
                 $condicionAdicional = " AND c.id_usuario_creacion = ? ";
                 $parametros[] = obtenerIdUsuarioActual();
             }
@@ -349,7 +350,7 @@ switch ($accion) {
             $condicionAdicional = "";
             $parametros = [];
             
-            if (tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+            if (tieneAlgunRol([ROL_ADMIN_SERVICIOS]) && !tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN])) {
                 $condicionAdicional = " AND id_usuario_creacion = ? ";
                 $parametros[] = obtenerIdUsuarioActual();
             }

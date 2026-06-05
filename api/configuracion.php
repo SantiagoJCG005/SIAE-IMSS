@@ -17,8 +17,8 @@ if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
-// Solo el Superadmin puede modificar la configuracion
-if (!tieneRol(ROL_SUPERADMIN)) {
+// Superadmin y roles con config_patronal pueden modificar la configuracion
+if (!tieneAlgunRol([ROL_SUPERADMIN])) {
     respuestaError('Sin permisos para esta accion', 403);
 }
 

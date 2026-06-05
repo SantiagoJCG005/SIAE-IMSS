@@ -4,6 +4,12 @@
  * Menu lateral con navegacion del modulo
  */
 
+// Roles personalizados (ID > 5) usan su propio sidebar dinámico
+if (obtenerRolActual() > 5) {
+    include __DIR__ . '/sidebar-custom.php';
+    return;
+}
+
 // Obtiene la página actual para marcar el menú activo
 $paginaActual = basename($_SERVER['PHP_SELF'], '.php');
 

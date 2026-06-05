@@ -4,6 +4,12 @@
  * Menu lateral con navegación del módulo
  */
 
+// Roles personalizados (ID > 5) usan su propio sidebar dinámico
+if (obtenerRolActual() > 5) {
+    include __DIR__ . '/sidebar-custom.php';
+    return;
+}
+
 // Obtiene la página actual para marcar el menú activo
 $paginaActual = basename($_SERVER['PHP_SELF'], '.php');
 
@@ -206,7 +212,17 @@ function renderNotificacion(n) {
     const icono = n.tipo === 'exportacion_txt' ? 'file-output' : (n.tipo === 'alerta_problema' ? 'alert-triangle' : 'info');
     const noLeida = !n.leida ? 'no-leida' : '';
     const tiempo = tiempoRelativo(n.fecha_creacion);
-    
+
+    let acciones = '';
+    if (n.referencia_tipo === 'reporte_alumno') {
+        acciones = `<div class="notif-actions-inline">
+            <button class="notif-action-btn ok"
+                    onclick="event.stopPropagation(); window.location.href='<?= URL_BASE ?>views/jefa/corregir-alumno.php?id=${n.id_notificacion}'">
+                Corregir datos
+            </button>
+        </div>`;
+    }
+
     return `
         <div class="notif-item ${noLeida}" onclick="verNotificacion(${n.id_notificacion})">
             <div class="notif-indicator ${tipoClase}">
@@ -218,6 +234,7 @@ function renderNotificacion(n) {
                     ${n.nombre_origen ? '<span>' + escapeHtml(n.nombre_origen) + '</span><span class="notif-meta-dot"></span>' : ''}
                     <span>${tiempo}</span>
                 </div>
+                ${acciones}
             </div>
             <button class="notif-delete-btn" onclick="event.stopPropagation(); eliminarNotif(${n.id_notificacion})" title="Eliminar">
                 <i data-lucide="x" style="width:14px;height:14px;"></i>

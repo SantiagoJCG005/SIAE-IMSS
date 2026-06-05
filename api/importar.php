@@ -18,8 +18,8 @@ if (!estaLogueado()) {
     respuestaError('No autorizado', 401);
 }
 
-// Solo Jefa de Servicios y Admin Servicios pueden importar
-if (!tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_SUPERADMIN)) {
+// Jefa, Admin SE, Superadmin y roles con importar_excel
+if (!tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_ADMIN_SERVICIOS, ROL_SUPERADMIN])) {
     respuestaError('Sin permisos para importar', 403);
 }
 

@@ -15,6 +15,13 @@
 </main>
 </div>
 
+<?php
+// Modal de corrección de datos de alumno (solo para roles con permisos de corrección)
+if (estaLogueado()) {
+    include __DIR__ . '/modal-correccion-alumno.php';
+}
+?>
+
 <!-- Scripts -->
 <script>
      //* SI FUNCIONA NO LE MUEVAS!!!!!

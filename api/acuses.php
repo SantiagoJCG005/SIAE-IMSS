@@ -675,7 +675,7 @@ function accionEstatusNss() {
 //  POST campo pdf (mismo PDF que se subió)
 // ─────────────────────────────────────────────
 function accionDebugLinea() {
-    if (!tieneRol(ROL_SUPERADMIN) && !tieneRol(ROL_JEFA_SERVICIOS)) {
+    if (!tieneAlgunRol([ROL_SUPERADMIN, ROL_JEFA_SERVICIOS])) {
         respuestaError('Sin permisos', 403);
     }
 
@@ -720,7 +720,7 @@ function accionDebugLinea() {
 //  Solo Superadmin, útil para diagnosticar PDFs nuevos
 // ─────────────────────────────────────────────
 function accionDebugPdf() {
-    if (!tieneRol(ROL_SUPERADMIN) && !tieneRol(ROL_JEFA_SERVICIOS)) {
+    if (!tieneAlgunRol([ROL_SUPERADMIN, ROL_JEFA_SERVICIOS])) {
         respuestaError('Sin permisos', 403);
     }
 
@@ -754,7 +754,7 @@ function accionDebugPdf() {
 function accionEliminar() {
     global $conexion;
 
-    if (!tieneRol(ROL_SUPERADMIN) && !tieneRol(ROL_JEFA_SERVICIOS)) {
+    if (!tieneAlgunRol([ROL_SUPERADMIN, ROL_JEFA_SERVICIOS])) {
         respuestaError('Sin permisos para eliminar', 403);
     }
 

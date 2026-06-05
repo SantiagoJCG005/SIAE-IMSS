@@ -11,8 +11,8 @@ $tituloPagina = 'Estatus IMSS Alumnos';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/functions.php';
 
-// PHP - verificar que sea Jefa o Superadmin
-requerirRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN]);
+// PHP - verificar rol (Admin IMSS y roles con ver_alumnos también pueden acceder)
+requerirRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN, ROL_ADMIN_IMSS]);
 
 $conexion = obtenerConexion();
 

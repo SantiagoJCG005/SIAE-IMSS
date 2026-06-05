@@ -67,6 +67,15 @@ $estatusIcono   = 'clock';
 $estatusDesc    = 'Tu tramite de afiliacion al IMSS esta en proceso. Servicios Escolares te notificara cuando tu seguro social quede activo.';
 $estatusFechaLabel = '';
 
+// PHP - si no hay alumno vinculado, el estatus IMSS no aplica para esta cuenta
+if (!$alumno) {
+    $estatusLabel = 'Sin registro';
+    $estatusColor = '#94A3B8';
+    $estatusBg    = '#F8FAFC';
+    $estatusIcono = 'minus-circle';
+    $estatusDesc  = 'Esta cuenta no tiene un expediente de alumno vinculado. El estatus IMSS no aplica para este perfil.';
+}
+
 // PHP - sobrescribir valores segun el estatus real del alumno
 if (!empty($estatusImss)) {
     $fechaFmt = date('d/m/Y', strtotime($estatusImss['fecha_movimiento']));
@@ -368,10 +377,34 @@ include __DIR__ . '/../layouts/sidebar-estudiante.php';
                 </div>
 
             <?php else: ?>
-                <div class="sin-datos">
-                    <i data-lucide="user-x"></i>
-                    <p style="font-size:14px;">No se encontraron datos vinculados a tu cuenta.</p>
-                    <p style="font-size:12px;margin-top:4px;">Contacta al área de Servicios Escolares.</p>
+                <!-- Sin alumno vinculado: mostrar información de la cuenta de usuario -->
+                <div class="dato-fila">
+                    <div class="dato-icono"><i data-lucide="user"></i></div>
+                    <div class="dato-texto">
+                        <div class="dato-label">Nombre completo</div>
+                        <div class="dato-valor"><?= htmlspecialchars($sessionUser['nombre_completo'] ?? '—') ?></div>
+                    </div>
+                </div>
+                <div class="dato-fila">
+                    <div class="dato-icono"><i data-lucide="at-sign"></i></div>
+                    <div class="dato-texto">
+                        <div class="dato-label">Usuario</div>
+                        <div class="dato-valor mono"><?= htmlspecialchars($sessionUser['username'] ?? '—') ?></div>
+                    </div>
+                </div>
+                <div class="dato-fila">
+                    <div class="dato-icono"><i data-lucide="mail"></i></div>
+                    <div class="dato-texto">
+                        <div class="dato-label">Correo electrónico</div>
+                        <div class="dato-valor"><?= htmlspecialchars($sessionUser['email'] ?? '—') ?></div>
+                    </div>
+                </div>
+                <div class="dato-fila">
+                    <div class="dato-icono"><i data-lucide="shield"></i></div>
+                    <div class="dato-texto">
+                        <div class="dato-label">Rol</div>
+                        <div class="dato-valor"><?= htmlspecialchars($sessionUser['rol_nombre'] ?? '—') ?></div>
+                    </div>
                 </div>
             <?php endif; ?>
         </div>
@@ -411,5 +444,153 @@ include __DIR__ . '/../layouts/sidebar-estudiante.php';
     </div>
 
 </div>
+
+<!--  rp -->
+<div style="margin-top:20px;text-align:right;">
+    <button class="btn btn-outline" onclick="abrirModalReporte()"
+            style="border-color:#EF4444;color:#EF4444;gap:8px;">
+        <i data-lucide="flag" style="width:15px;height:15px;"></i>
+        Reportar datos incorrectos
+    </button>
+</div>
+
+<!-- Modal reporte -->
+<div class="modal-overlay" id="modalReporte">
+    <div class="modal" style="max-width:480px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Reportar datos incorrectos</h3>
+            <button class="modal-close" onclick="cerrarModalReporte()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+                Indica qué dato está incorrecto y descríbelo. Se notificará al área de Servicios Escolares para corregirlo.
+            </p>
+            <div class="form-group">
+                <label class="form-label">¿Qué datos están incorrectos? <span style="color:var(--text-muted);font-weight:400;">(puedes marcar varios)</span></label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;background:var(--bg-secondary,#F8FAFC);border:1px solid var(--border-color,#E2E8F0);border-radius:8px;padding:12px;">
+                    <?php foreach ([
+                        'Nombre'       => 'user',
+                        'CURP'         => 'fingerprint',
+                        'NSS'          => 'shield',
+                        'Carrera'      => 'graduation-cap',
+                        'Email'        => 'mail',
+                        'Teléfono'     => 'phone',
+                        'Estatus IMSS' => 'shield-check',
+                        'Otro'         => 'more-horizontal',
+                    ] as $campo => $icono): ?>
+                    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:4px 0;">
+                        <input type="checkbox" class="reporte-campo-check" value="<?= $campo ?>"
+                               style="width:15px;height:15px;cursor:pointer;accent-color:#EF4444;">
+                        <i data-lucide="<?= $icono ?>" style="width:14px;height:14px;color:var(--text-muted,#94A3B8);flex-shrink:0;"></i>
+                        <?= $campo ?>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Descripción del problema *</label>
+                <textarea id="reporteDescripcion" class="form-control"
+                          rows="4" maxlength="500"
+                          placeholder="Explica qué está mal y cuál es el valor correcto..."></textarea>
+                <small class="form-text" id="reporteContador" style="text-align:right;display:block;">0 / 500</small>
+            </div>
+            <div id="reporteMensaje" style="display:none;border-radius:8px;padding:12px 14px;font-size:13px;margin-top:4px;"></div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-ghost" onclick="cerrarModalReporte()">Cancelar</button>
+            <button type="button" class="btn btn-primary" id="reporteBtnEnviar"
+                    onclick="enviarReporte()"
+                    style="background:#EF4444;border-color:#EF4444;">
+                <i data-lucide="send"></i>
+                Enviar reporte
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const API_NOTIF_REPORTE = '<?= URL_BASE ?>api/notificaciones.php?action=reportar_datos';
+
+function abrirModalReporte() {
+    document.querySelectorAll('.reporte-campo-check').forEach(cb => cb.checked = false);
+    document.getElementById('reporteDescripcion').value = '';
+    document.getElementById('reporteContador').textContent = '0 / 500';
+    document.getElementById('reporteMensaje').style.display = 'none';
+    document.getElementById('reporteBtnEnviar').disabled = false;
+    document.getElementById('reporteBtnEnviar').style.display = '';
+    document.getElementById('reporteBtnEnviar').innerHTML = '<i data-lucide="send"></i> Enviar reporte';
+    document.getElementById('modalReporte').classList.add('active');
+    lucide.createIcons();
+}
+
+function cerrarModalReporte() {
+    document.getElementById('modalReporte').classList.remove('active');
+}
+
+document.getElementById('reporteDescripcion')?.addEventListener('input', function() {
+    document.getElementById('reporteContador').textContent = this.value.length + ' / 500';
+});
+
+async function enviarReporte() {
+    const campos      = [...document.querySelectorAll('.reporte-campo-check:checked')].map(cb => cb.value);
+    const descripcion = document.getElementById('reporteDescripcion').value.trim();
+    const msgEl       = document.getElementById('reporteMensaje');
+    const btnEnviar   = document.getElementById('reporteBtnEnviar');
+
+    msgEl.style.display = 'none';
+
+    if (!descripcion) {
+        msgEl.style.cssText = 'display:block;background:#FEE2E2;color:#991B1B;border-radius:8px;padding:12px 14px;font-size:13px;margin-top:4px;';
+        msgEl.textContent = 'Por favor describe el problema antes de enviar.';
+        return;
+    }
+
+    btnEnviar.disabled = true;
+    btnEnviar.innerHTML = '<i data-lucide="loader" style="width:15px;height:15px;animation:spin 1s linear infinite;"></i> Enviando...';
+    lucide.createIcons();
+
+    try {
+        const resp = await fetch(API_NOTIF_REPORTE, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ campos, descripcion })
+        });
+        const data = await resp.json();
+
+        if (data.success) {
+            msgEl.style.cssText = 'display:block;background:#DCFCE7;color:#166534;border-radius:8px;padding:12px 14px;font-size:13px;margin-top:4px;';
+            msgEl.textContent = '✓ Reporte enviado. Servicios Escolares fue notificado y revisará tu caso.';
+            btnEnviar.style.display = 'none';
+            setTimeout(cerrarModalReporte, 2500);
+        } else {
+            msgEl.style.cssText = 'display:block;background:#FEE2E2;color:#991B1B;border-radius:8px;padding:12px 14px;font-size:13px;margin-top:4px;';
+            msgEl.textContent = data.message || 'Error al enviar el reporte.';
+            btnEnviar.disabled = false;
+            btnEnviar.innerHTML = '<i data-lucide="send"></i> Enviar reporte';
+            lucide.createIcons();
+        }
+    } catch (e) {
+        msgEl.style.cssText = 'display:block;background:#FEE2E2;color:#991B1B;border-radius:8px;padding:12px 14px;font-size:13px;margin-top:4px;';
+        msgEl.textContent = 'Error de conexión. Intenta de nuevo.';
+        btnEnviar.disabled = false;
+        btnEnviar.innerHTML = '<i data-lucide="send"></i> Enviar reporte';
+        lucide.createIcons();
+    }
+}
+
+document.getElementById('modalReporte').addEventListener('click', e => {
+    if (e.target === e.currentTarget) cerrarModalReporte();
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') cerrarModalReporte();
+});
+</script>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 
 <?php include __DIR__ . '/../layouts/footer.php'; ?>

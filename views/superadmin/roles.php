@@ -462,7 +462,6 @@ function eliminarRol(idRol, nombreRol) {
     });
 }
 
-// Funcion que muestra un dialogo informativo sobre los permisos de un rol
 function verPermisos(id, nombre) {
     Swal.fire({
         title: 'Permisos: ' + nombre,
@@ -470,8 +469,71 @@ function verPermisos(id, nombre) {
         icon: 'info',
         confirmButtonColor: '#2563EB'
     });
+
+
 }
 
+/*
+async function verPermisos(id, nombre) {
+    
+    if (id <= 5) {
+        Swal.fire({
+            title: 'Permisos: ' + nombre,
+            html: '<p style="color:#64748B;font-size:14px;">Este es un rol del sistema con permisos fijos.<br>Consulta la matriz de permisos en la tabla de abajo.</p>',
+            icon: 'info',
+            confirmButtonColor: '#2563EB'
+        });
+        return;
+    }
+
+   
+    const respuesta = await llamarApi('<?= URL_BASE ?>api/roles.php', {
+        method: 'POST',
+        body: JSON.stringify({ action: 'obtener', id_rol: id })
+    });
+
+    if (!respuesta || !respuesta.success) {
+        mostrarNotificacion('No se pudieron cargar los permisos', 'error');
+        return;
+    }
+
+    const permisosRol = respuesta.data.permisos || [];
+
+   
+    const filas = listaPermisos.map(p => {
+        const tiene = permisosRol.includes(p.id);
+        return `
+            <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;
+                        border-radius:7px;margin-bottom:4px;
+                        background:${tiene ? '#F0FDF4' : '#F8FAFC'};
+                        border:1px solid ${tiene ? '#86EFAC' : '#E2E8F0'};">
+                <span style="font-size:16px;">${tiene ? '✅' : '⬜'}</span>
+                <span style="font-size:13px;font-weight:${tiene ? '600' : '400'};
+                             color:${tiene ? '#166534' : '#94A3B8'};">
+                    ${p.nombre}
+                </span>
+            </div>`;
+    }).join('');
+
+    const total = permisosRol.length;
+
+    Swal.fire({
+        title: `<span style="font-size:17px;">Permisos: ${nombre}</span>`,
+        html: `
+            <p style="color:#64748B;font-size:12px;margin-bottom:12px;">
+                ${total > 0 ? `${total} permiso${total > 1 ? 's' : ''} activo${total > 1 ? 's' : ''}` : 'Sin permisos asignados'}
+            </p>
+            <div style="text-align:left;max-height:320px;overflow-y:auto;padding:2px;">
+                ${filas}
+            </div>`,
+        showConfirmButton: true,
+        confirmButtonText: 'Cerrar',
+        confirmButtonColor: '#2563EB',
+        width: 420
+    });
+}
+
+*/
 // Funcion que redirige a la pagina de usuarios filtrada por rol
 async function verUsuarios(id, nombre) {
     window.location = `<?= URL_BASE ?>views/superadmin/usuarios.php?rol=${id}`;

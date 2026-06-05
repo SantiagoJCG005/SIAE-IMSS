@@ -5,6 +5,12 @@
  * Menu lateral con navegacion del modulo
  */
 
+// Roles personalizados (ID > 5) usan su propio sidebar dinámico
+if (obtenerRolActual() > 5) {
+    include __DIR__ . '/sidebar-custom.php';
+    return;
+}
+
 // Obtiene la pagina actual para marcar el menu activo
 $paginaActual = basename($_SERVER['PHP_SELF'], '.php');
 
@@ -239,7 +245,7 @@ function renderNotificacion(n) {
     const icono = n.tipo === 'exportacion_txt' ? 'file-output' : (n.tipo === 'alerta_problema' ? 'alert-triangle' : 'info');
     const noLeida = !n.leida ? 'no-leida' : '';
     const tiempo = tiempoRelativo(n.fecha_creacion);
-    
+
     let acciones = '';
     if (n.tipo === 'exportacion_txt' && (n.estado === 'nueva' || n.estado === 'vista')) {
         acciones = `
@@ -248,6 +254,15 @@ function renderNotificacion(n) {
                 <button class="notif-action-btn problema" onclick="event.stopPropagation(); cambiarEstado(${n.id_notificacion}, 'problema')">Revisar</button>
             </div>
         `;
+    }
+    if (n.referencia_tipo === 'reporte_alumno') {
+        acciones = `
+            <div class="notif-actions-inline">
+                <button class="notif-action-btn ok"
+                        onclick="event.stopPropagation(); window.location.href='<?= URL_BASE ?>views/jefa/corregir-alumno.php?id=${n.id_notificacion}'">
+                    Corregir datos
+                </button>
+            </div>`;
     }
     
     return `

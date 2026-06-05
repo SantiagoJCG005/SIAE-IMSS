@@ -160,7 +160,7 @@ switch ($accion) {
                     notificarProblema($conexion, $idNotificacion, $idUsuario);
                 }
                 
-                respuestaExitosa(['mensaje' => 'Estado actualizado a: ' . $nuevoEstado]);
+                respuestaExitosa(['mensaje' => "Estado actualizado a: {$nuevoEstado}"]);
             } else {
                 respuestaError('Notificación no encontrada');
             }
@@ -261,6 +261,82 @@ switch ($accion) {
         }
         break;
     
+    /**
+     * Alumno reporta que sus datos son incorrectos
+     * Crea notificación para todos los Jefa SE y Admin SE activos
+     */
+    case 'reportar_datos':
+        try {
+            $entrada     = json_decode(file_get_contents('php://input'), true) ?? [];
+            $campos      = array_filter(array_map('trim', (array)($entrada['campos'] ?? [])));
+            $descripcion = trim($entrada['descripcion'] ?? '');
+
+            if (empty($descripcion)) {
+                respuestaError('Debes describir el problema');
+            }
+
+            $usuario = obtenerUsuarioActual();
+            $nombre  = $usuario['nombre_completo'] ?? 'Alumno';
+            $nc      = $usuario['username'] ?? '';
+
+            $titulo   = "Reporte de datos — {$nombre}";
+            $campoTxt = !empty($campos)
+                ? 'Campos incorrectos: ' . implode(', ', $campos) . '. '
+                : '';
+            $mensaje  = "El alumno {$nombre}" . ($nc ? " (No. Control: {$nc})" : '') .
+                        " reporta datos incorrectos. {$campoTxt}Descripción: {$descripcion}";
+
+            // Notificar a Jefa SE, Admin SE y roles personalizados con permisos equivalentes
+            $destinatarios = $conexion->prepare("
+                SELECT u.id_usuario
+                FROM usuarios u
+                LEFT JOIN roles r ON r.id_rol = u.id_rol
+                WHERE u.activo = 1
+                  AND u.id_usuario != ?
+                  AND (
+                      u.id_rol IN (?, ?)
+                      OR (
+                          u.id_rol > 5
+                          AND (
+                              r.permisos LIKE '%atender_incidencias%'
+                              OR r.permisos LIKE '%validar_movimientos%'
+                              OR r.permisos LIKE '%ver_alumnos%'
+                          )
+                      )
+                  )
+            ");
+            $destinatarios->execute([$idUsuario, ROL_JEFA_SERVICIOS, ROL_ADMIN_SERVICIOS]);
+            $users = $destinatarios->fetchAll();
+
+            if (empty($users)) {
+                respuestaError('No hay destinatarios disponibles para el reporte');
+            }
+
+            $enviadas = 0;
+            foreach ($users as $dest) {
+                $resultado = crearNotificacion(
+                    $conexion,
+                    $dest['id_usuario'],
+                    $idUsuario,
+                    'alerta_problema',
+                    $titulo,
+                    $mensaje,
+                    'reporte_alumno',
+                    null,
+                    ['campos' => array_values($campos), 'nc' => $nc]
+                );
+                if ($resultado) $enviadas++;
+            }
+
+            $camposLog = !empty($campos) ? implode(', ', $campos) : 'no especificados';
+            registrarEnBitacora('REPORTE_DATOS', "Alumno reportó datos incorrectos. Campos: {$camposLog}");
+            respuestaExitosa(['enviadas' => $enviadas], 'Reporte enviado correctamente');
+
+        } catch (Exception $e) {
+            respuestaError('Error al enviar el reporte: ' . $e->getMessage());
+        }
+        break;
+
     default:
         respuestaError('Acción no válida', 400);
 }
@@ -268,7 +344,7 @@ switch ($accion) {
 /**
  * Notifica al usuario origen que la Jefa marcó un problema
  */
-function notificarProblema($conexion, $idNotificacionOriginal, $idUsuarioJefa) {
+function notificarProblema(\PDO $conexion, int $idNotificacionOriginal, int $idUsuarioJefa): void {
     try {
         // Obtener datos de la notificación original
         $consulta = $conexion->prepare("SELECT * FROM notificaciones WHERE id_notificacion = ?");
@@ -313,7 +389,7 @@ function notificarProblema($conexion, $idNotificacionOriginal, $idUsuarioJefa) {
 /**
  * Función helper para crear notificaciones (usada por otros módulos)
  */
-function crearNotificacion($conexion, $idDestino, $idOrigen, $tipo, $titulo, $mensaje, $refTipo = null, $refId = null, $datosExtra = null) {
+function crearNotificacion(\PDO $conexion, int $idDestino, ?int $idOrigen, string $tipo, string $titulo, string $mensaje, ?string $refTipo = null, ?int $refId = null, ?array $datosExtra = null): int|false {
     try {
         $sql = "
             INSERT INTO notificaciones 

@@ -6,6 +6,12 @@
  * Contiene los enlaces de navegacion, la informacion del usuario y el boton de cerrar sesion.
  */
 
+// Roles personalizados (ID > 5) usan su propio sidebar dinámico
+if (obtenerRolActual() > 5) {
+    include __DIR__ . '/sidebar-custom.php';
+    return;
+}
+
 // Obtiene el nombre del archivo PHP actual sin la extension
 // un ejemplo: si estamos en "usuarios.php", guarda "usuarios"
 // Esto sirve para saber que opcion del menu debe estar resaltada

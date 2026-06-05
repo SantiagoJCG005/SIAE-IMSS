@@ -84,18 +84,12 @@ switch ($accion) {
         $username = trim($entrada['username'] ?? '');
         $email = trim($entrada['email'] ?? '');
         $nombre = trim($entrada['nombre_completo'] ?? '');
-        $password = $entrada['password'] ?? '';
         $rol = intval($entrada['id_rol'] ?? 0);
         $activo = intval($entrada['activo'] ?? 1);
-        
-        // Valida que no esten vacios
-        if (empty($username) || empty($email) || empty($nombre) || empty($password) || !$rol) {
+
+        // Valida que no esten vacios (password no se requiere: se genera automaticamente)
+        if (empty($username) || empty($email) || empty($nombre) || !$rol) {
             respuestaError('Todos los campos son obligatorios');
-        }
-        
-        // Valida longitud de contraseña
-        if (strlen($password) < 8) {
-            respuestaError('La contraseña debe tener al menos 8 caracteres');
         }
         
         // Verifica que el username no exista

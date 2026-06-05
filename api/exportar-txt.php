@@ -28,8 +28,8 @@ if (!tieneAlgunRol($rolesPermitidos)) {
     respuestaError('Sin permisos para exportar', 403);
 }
 
-// Determinar si es Admin SE (para notificar a Jefa)
-$esAdminSE = tieneRol(ROL_ADMIN_SERVICIOS) && !tieneRol(ROL_JEFA_SERVICIOS) && !tieneRol(ROL_SUPERADMIN);
+// Determinar si es Admin SE (para notificar a Jefa): incluye roles personalizados con exportar_txt
+$esAdminSE = tieneAlgunRol([ROL_ADMIN_SERVICIOS]) && !tieneAlgunRol([ROL_JEFA_SERVICIOS, ROL_SUPERADMIN]);
 
 // Conexion a la base de datos
 $conexion = obtenerConexion();

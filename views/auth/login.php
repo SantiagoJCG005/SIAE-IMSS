@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     <style>
         :root {
-            --primario: #F97316;
+            --primario: #f97316;
             --primario-hover: #EA580C;
             --secundario: #2563EB;
             --texto-primario: #1E293B;

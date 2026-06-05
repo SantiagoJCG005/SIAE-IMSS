@@ -4,6 +4,12 @@
  * Menu lateral del portal del alumno con solo la vista de estatus IMSS
  */
 
+// Roles personalizados (ID > 5) usan su propio sidebar dinámico
+if (obtenerRolActual() > 5) {
+    include __DIR__ . '/sidebar-custom.php';
+    return;
+}
+
 // PHP - obtener nombre del archivo actual para marcar el item activo del menu
 $paginaActual = basename($_SERVER['PHP_SELF'], '.php');
 // PHP - obtener datos del estudiante logueado
@@ -55,7 +61,7 @@ $avatarColor  = obtenerColorAvatar($currentUser['nombre_completo'] ?? 'Alumno');
             <div class="header-user">
                 <div class="header-user-info">
                     <div class="header-user-name"><?= htmlspecialchars($currentUser['nombre_completo'] ?? 'Alumno') ?></div>
-                    <div class="header-user-role">Estudiante</div>
+                    <div class="header-user-role"><?= htmlspecialchars($currentUser['rol_nombre'] ?? 'Estudiante') ?></div>
                 </div>
                 <div class="header-user-avatar" style="background: <?= $avatarColor ?>">
                     <?= $userInitials ?>
