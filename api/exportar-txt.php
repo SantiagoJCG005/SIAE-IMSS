@@ -109,7 +109,7 @@ function generarLineaAlta($alumno, $configPatronal, $fechaMov) {
     $linea .= formatearCampo($alumno['apellido_paterno'], 27);           // 23-49
     $linea .= formatearCampo($alumno['apellido_materno'] ?? '', 27);     // 50-76
     $linea .= formatearCampo($alumno['nombres'], 27);                    // 77-103
-    $linea .= $configPatronal['prefijo_alta'] ?? '000000      210';      // 104-118 (15 chars)
+    $linea .= !empty($configPatronal['prefijo_alta']) ? $configPatronal['prefijo_alta'] : '000000      210'; // 104-118 (15 chars)
     $linea .= $fechaMov;                                                 // 119-126 (8 chars)
     $linea .= formatearCampo($configPatronal['umf_alta'] ?? '001', 3);   // 127-129
     $linea .= '  ';                                                      // 130-131
@@ -152,7 +152,7 @@ function generarLineaBaja($alumno, $configPatronal, $fechaMov) {
     $linea .= formatearCampo($alumno['apellido_paterno'], 27);           // 23-49
     $linea .= formatearCampo($alumno['apellido_materno'] ?? '', 27);     // 50-76
     $linea .= formatearCampo($alumno['nombres'], 27);                    // 77-103
-    $linea .= $configPatronal['prefijo_baja'] ?? '000000000000000';      // 104-118 (15 chars)
+    $linea .= !empty($configPatronal['prefijo_baja']) ? $configPatronal['prefijo_baja'] : '000000000000000'; // 104-118 (15 chars)
     $linea .= $fechaMov;                                                 // 119-126 (8 chars)
     $linea .= formatearCampo($configPatronal['umf_baja'] ?? '000', 3);   // 127-129
     

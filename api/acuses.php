@@ -285,8 +285,6 @@ function accionConfirmar() {
         $contOmitidos      = 0;
         $contDuplicados    = 0;
 
-        $debugBaja = null; // DEBUG TEMPORAL
-
         if (!empty($nssList)) {
             $mapaAlumnos = []; // nss => id_alumno
 
@@ -376,9 +374,7 @@ function accionConfirmar() {
                     WHERE $whereBaja
                 ");
                 $stmt->execute($paramsBaja);
-                $debugBajaRows = [];
                 while ($row = $stmt->fetch()) {
-                    $debugBajaRows[] = $row;
                     // Vincular al NSS del PDF (11 dígitos) para que el resto del flujo sea consistente
                     foreach ($nssList as $nssOrig) {
                         if ($row['nss'] === $nssOrig || $row['nss'] === substr($nssOrig, 0, 10)) {
@@ -387,14 +383,6 @@ function accionConfirmar() {
                         }
                     }
                 }
-                // DEBUG TEMPORAL — eliminar una vez resuelto el bug
-                $debugBaja = [
-                    'tipo_recibido'    => $tipo,
-                    'nss_list'         => $nssList,
-                    'datos_imss_rows'  => $debugBajaRows,
-                    'mapa_alumnos'     => $mapaAlumnos,
-                ];
-                error_log('[SIAE-DEBUG] Baja confirm: ' . json_encode($debugBaja));
             }
 
             // Cargar estatus actuales de estos NSS
@@ -520,14 +508,13 @@ function accionConfirmar() {
         $stmt->execute([$contProcesados, $contNoEncontrados, $contOmitidos, $idAcuse]);
 
         $conexion->commit();
+        // PHP - limpiar acuse pendiente de la sesion del usuario
+        unset($_SESSION[$sesionKey]);
 
     } catch (Exception $e) {
         $conexion->rollBack();
         respuestaError('Error al guardar el acuse: ' . $e->getMessage());
     }
-
-    // PHP - limpiar acuse pendiente de la sesion del usuario
-    unset($_SESSION[$sesionKey]);
 
     respuestaExitosa([
         'id_acuse'        => $idAcuse,
@@ -538,7 +525,6 @@ function accionConfirmar() {
         'no_encontrados'  => $contNoEncontrados,
         'omitidos'        => $contOmitidos,
         'duplicados'      => $contDuplicados,
-        'debug_baja'      => $debugBaja,
     ], 'Acuse confirmado y registros actualizados correctamente.');
 }
 
@@ -656,7 +642,7 @@ function accionEstatusNss() {
     $stmt = $conexion->prepare("
         SELECT e.estatus, e.fecha_movimiento, a.archivo_nombre, a.numero_lote
         FROM estatus_imss_alumnos e
-        INNER JOIN acuses_imss a ON a.id_acuse = e.id_acuse_origen
+        LEFT JOIN acuses_imss a ON a.id_acuse = e.id_acuse_origen
         WHERE e.nss = ?
     ");
     $stmt->execute([$nss]);

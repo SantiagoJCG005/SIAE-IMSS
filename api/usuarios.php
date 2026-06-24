@@ -319,7 +319,7 @@ switch ($accion) {
         $nuevaPassword = $entrada['nueva_password'] ?? '';
         $confirmar = $entrada['confirmar_password'] ?? '';
         $passwordActual = $entrada['password_actual'] ?? '';
-        $esForzado = isset($entrada['forzado']) && $entrada['forzado'] === true;
+        $esForzado = !empty($_SESSION['user']['debe_cambiar_password']);
 
         if (empty($nuevaPassword) || empty($confirmar)) {
             respuestaError('Completa todos los campos');

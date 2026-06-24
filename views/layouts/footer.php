@@ -27,7 +27,7 @@ if (estaLogueado()) {
      //* SI FUNCIONA NO LE MUEVAS!!!!!
     // Inicializa todos los iconos de Lucide en la pagina
     // Convierte las etiquetas con data-lucide en iconos SVG visibles
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
     
     // Guarda la URL base del sistema en una variable de JavaScript
     // Esto permite usarla en otras funciones para hacer peticiones al servidor

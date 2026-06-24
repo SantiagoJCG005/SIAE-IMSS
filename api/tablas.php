@@ -250,12 +250,12 @@ function generarLineaResultado($alumno, $configPatronal, $esAlta, $fechaMovimien
         $linea .= $formatearCampo($alumno['nombres'], 27);
         $linea .= '000000000000000';
         $linea .= $fechaMov;
-        $linea .= '00';
         $linea .= $formatearCampo($configPatronal['umf_baja'] ?? '000', 3);
-        $linea .= '02     ';
-        $linea .= $formatearNumero($alumno['numero_cuenta'], 10);
+        $linea .= '0002';
+        $linea .= '     ';
+        $linea .= $formatearNumero(0, 10);
         $linea .= '6';
-        $linea .= $formatearCampo($alumno['curp'] ?? '', 18);
+        $linea .= str_repeat(' ', 18);
         $linea .= '9';
     }
     

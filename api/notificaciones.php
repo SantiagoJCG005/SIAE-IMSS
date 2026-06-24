@@ -196,11 +196,11 @@ switch ($accion) {
             if ($notificacion) {
                 // Marcar como leída al ver detalle
                 $update = $conexion->prepare("
-                    UPDATE notificaciones 
+                    UPDATE notificaciones
                     SET leida = 1, fecha_lectura = COALESCE(fecha_lectura, NOW())
-                    WHERE id_notificacion = ?
+                    WHERE id_notificacion = ? AND id_usuario_destino = ?
                 ");
-                $update->execute([$idNotificacion]);
+                $update->execute([$idNotificacion, $idUsuario]);
                 
                 respuestaExitosa($notificacion);
             } else {

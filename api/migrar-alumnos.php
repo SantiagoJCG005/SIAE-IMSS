@@ -185,15 +185,15 @@ for ($i = 1; $i < count($filas); $i++) {
 
     if (empty($nombreCompleto)) {
         $resumen['errores']++;
-        $resumen['detalle_errores'][] = "Fila " . $i + 1 . ": sin nombre";
+        $resumen['detalle_errores'][] = "Fila " . ($i + 1) . ": sin nombre";
         continue;
     }
 
     // Normalizar sexo
     $sexo = null;
-    if (str_contains($sexoRaw, 'H') || str_contains($sexoRaw, 'M') || str_contains($sexoRaw, 'HOMBRE') || str_contains($sexoRaw, 'MASCULINO')) {
+    if ($sexoRaw === 'H' || str_contains($sexoRaw, 'HOMBRE') || str_contains($sexoRaw, 'MASCULINO')) {
         $sexo = 'H';
-    } elseif (str_contains($sexoRaw, 'F') || str_contains($sexoRaw, 'MUJER') || str_contains($sexoRaw, 'FEMENINO')) {
+    } elseif ($sexoRaw === 'M' || $sexoRaw === 'F' || str_contains($sexoRaw, 'MUJER') || str_contains($sexoRaw, 'FEMENINO')) {
         $sexo = 'M';
     }
 
@@ -326,7 +326,7 @@ for ($i = 1; $i < count($filas); $i++) {
     } catch (Exception $e) {
         if ($conexion->inTransaction()) $conexion->rollBack();
         $resumen['errores']++;
-        $resumen['detalle_errores'][] = "Fila " . $i + 1 . " ($numeroControl): " . $e->getMessage();
+        $resumen['detalle_errores'][] = "Fila " . ($i + 1) . " ($numeroControl): " . $e->getMessage();
     }
 }
 

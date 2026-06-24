@@ -522,7 +522,7 @@ function abrirModalReporte() {
     document.getElementById('reporteBtnEnviar').style.display = '';
     document.getElementById('reporteBtnEnviar').innerHTML = '<i data-lucide="send"></i> Enviar reporte';
     document.getElementById('modalReporte').classList.add('active');
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 function cerrarModalReporte() {
@@ -549,7 +549,7 @@ async function enviarReporte() {
 
     btnEnviar.disabled = true;
     btnEnviar.innerHTML = '<i data-lucide="loader" style="width:15px;height:15px;animation:spin 1s linear infinite;"></i> Enviando...';
-    lucide.createIcons();
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
         const resp = await fetch(API_NOTIF_REPORTE, {
@@ -569,14 +569,14 @@ async function enviarReporte() {
             msgEl.textContent = data.message || 'Error al enviar el reporte.';
             btnEnviar.disabled = false;
             btnEnviar.innerHTML = '<i data-lucide="send"></i> Enviar reporte';
-            lucide.createIcons();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     } catch (e) {
         msgEl.style.cssText = 'display:block;background:#FEE2E2;color:#991B1B;border-radius:8px;padding:12px 14px;font-size:13px;margin-top:4px;';
         msgEl.textContent = 'Error de conexión. Intenta de nuevo.';
         btnEnviar.disabled = false;
         btnEnviar.innerHTML = '<i data-lucide="send"></i> Enviar reporte';
-        lucide.createIcons();
+        if (typeof lucide !== 'undefined') lucide.createIcons();
     }
 }
 
