@@ -17,24 +17,28 @@ define('DB_USER', getenv('DB_USER') ?: 'root');
 // Contrasena de la base de datos
 // Docker: lee desde .env automaticamente
 // XAMPP: carga el .env manualmente desde la raiz del proyecto
-$dbPass = getenv('DB_PASS');
-if ($dbPass === false || $dbPass === '') {
+$dbPass       = getenv('DB_PASS');
+$dbPassLeida  = $dbPass !== false; // false = variable de entorno no existe
+
+if (!$dbPassLeida) {
     $envFile = __DIR__ . '/../.env';
     if (file_exists($envFile)) {
         foreach (file($envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $linea) {
             if (strpos($linea, '#') === 0) continue;
             [$clave, $valor] = array_pad(explode('=', $linea, 2), 2, '');
             if (trim($clave) === 'DB_PASS') {
-                $dbPass = trim($valor);
+                $dbPass      = trim($valor); // puede ser '' (XAMPP sin contraseña)
+                $dbPassLeida = true;
                 break;
             }
         }
     }
 }
-if ($dbPass === false || $dbPass === '') {
+
+if (!$dbPassLeida) {
     die('Error de configuracion: DB_PASS no esta definida. Crea un archivo .env en la raiz del proyecto.');
 }
-define('DB_PASS', $dbPass);
+define('DB_PASS', $dbPass ?? '');
 
 // Tipo de codificacion de caracteres
 define('DB_CHARSET', 'utf8mb4');
